@@ -15,13 +15,13 @@ public class ConfigurationForm : Form
     private EmailService emailService;
     private NotifyIcon trayIcon;
 
-    public ConfigurationForm()
+    public ConfigurationForm(NotifyIcon _trayIcon)
     {
         Text = "Configuration";
         Width = 400;
         Height = 400;
 
-        trayIcon = new NotifyIcon() { Icon = SystemIcons.Information, Visible = true, Text = "MU Process Monitor" };
+        trayIcon = _trayIcon;
         emailService = new EmailService(trayIcon);
 
         Label lblMaxPercentage = new Label() { Text = "Max % Change:", Left = 10, Top = 20 };
@@ -66,9 +66,10 @@ public class ConfigurationForm : Form
             Configuration.SMTPDeliveryMethod = Enum.Parse<SmtpDeliveryMethod>(cmbDeliveryMethod.SelectedItem?.ToString() ?? "Network");
             Configuration.SMTPTimeout = (int)nudTimeout.Value;
 
+            SaveConfiguration();
+
             if (SendTestEmail())
             {
-                SaveConfiguration();
                 trayIcon.ShowBalloonTip(5000, "Success", "Configuration saved and test email sent successfully!", ToolTipIcon.Info);
                 Close();
             }

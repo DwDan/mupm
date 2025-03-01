@@ -57,15 +57,15 @@ public class TrayApplicationContext : ApplicationContext
         processListForm.BringToFront();
     }
 
-    private void OnConfigure(object? sender, EventArgs e)
+    public void OnConfigure(object? sender, EventArgs e)
     {
-        using (var form = new ConfigurationForm())
+        using (var form = new ConfigurationForm(trayIcon))
         {
             form.ShowDialog();
         }
     }
 
-    private void OnExit(object? sender, EventArgs e)
+    public void OnExit(object? sender, EventArgs e)
     {
         isMonitoring = false;
         monitorThread.Join();

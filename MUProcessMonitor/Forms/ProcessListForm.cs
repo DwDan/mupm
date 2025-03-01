@@ -6,7 +6,7 @@ namespace MUProcessMonitor.Forms;
 public class ProcessListForm : Form
 {
     private ListView listView;
-    private Button btnRefresh;
+    private Button btnRefresh, btnConfigure, btnMinimize;
     private TrayApplicationContext trayContext;
     private ContextMenuStrip contextMenuStrip;
 
@@ -18,7 +18,8 @@ public class ProcessListForm : Form
         Height = 400;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterScreen;
-        FormClosing += ProcessListForm_FormClosing;
+        FormClosing += trayContext.OnExit;
+        Resize += ProcessListForm_Resize;
 
         listView = new ListView
         {
@@ -40,11 +41,19 @@ public class ProcessListForm : Form
 
         contextMenuStrip = new ContextMenuStrip();
 
-        btnRefresh = new Button { Text = "Refresh", Left = 200, Width = 100, Top = 320 };
+        btnRefresh = new Button { Text = "Refresh", Left = 100, Width = 100, Top = 320 };
         btnRefresh.Click += (s, e) => LoadProcesses();
+
+        btnConfigure = new Button { Text = "Configure", Left = 210, Width = 100, Top = 320 };
+        btnConfigure.Click += (s, e) => trayContext.OnConfigure(s, e);
+
+        btnMinimize = new Button { Text = "Minimize", Left = 320, Width = 100, Top = 320 };
+        btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized;
 
         Controls.Add(listView);
         Controls.Add(btnRefresh);
+        Controls.Add(btnConfigure);
+        Controls.Add(btnMinimize);
 
         LoadProcesses();
     }
@@ -105,9 +114,11 @@ public class ProcessListForm : Form
         LoadProcesses();
     }
 
-    private void ProcessListForm_FormClosing(object? sender, FormClosingEventArgs e)
+    private void ProcessListForm_Resize(object? sender, EventArgs e)
     {
-        e.Cancel = true;
-        Hide();
+        if (WindowState == FormWindowState.Minimized)
+        {
+            Hide();
+        }
     }
 }
