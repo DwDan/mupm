@@ -12,4 +12,6 @@ public static class Configuration
     public static bool SMTPEnableSsl { get; set; } = true;
     public static SmtpDeliveryMethod SMTPDeliveryMethod { get; set; } = SmtpDeliveryMethod.Network;
     public static int SMTPTimeout { get; set; } = 10000;
+    public static string BotToken { get; set; } = "your-bot-token";
+    public static string ChatId { get; set; } = "your-chat-id";
 }

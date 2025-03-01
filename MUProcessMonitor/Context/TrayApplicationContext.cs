@@ -13,7 +13,7 @@ public class TrayApplicationContext : ApplicationContext
     private Dictionary<int, bool> monitoredProcesses = new();
     private Thread monitorThread;
     private bool isMonitoring = true;
-    private EmailService emailService;
+    private TelegramService telegramService;
 
     public TrayApplicationContext()
     {
@@ -37,7 +37,7 @@ public class TrayApplicationContext : ApplicationContext
         monitorThread = new Thread(MonitorProcesses) { IsBackground = true };
         monitorThread.Start();
 
-        emailService = new EmailService(trayIcon);
+        telegramService = new TelegramService(trayIcon);
     }
 
     public bool IsMonitoring(int processId)
@@ -59,7 +59,7 @@ public class TrayApplicationContext : ApplicationContext
 
     public void OnConfigure(object? sender, EventArgs e)
     {
-        using (var form = new ConfigurationForm(trayIcon))
+        using (var form = new ConfigurationTelegramForm(trayIcon))
         {
             form.ShowDialog();
         }
@@ -127,7 +127,7 @@ public class TrayApplicationContext : ApplicationContext
                         {
                             string message = $"Process {processId} increased memory usage by {percentageChange:F2}%!";
                             trayIcon.ShowBalloonTip(5000, "Memory Alert", message, ToolTipIcon.Warning);
-                            emailService.QueueEmail("Memory Alert", message);
+                            telegramService.QueueNotification("Memory Alert", message);
 
                         }
                     }
@@ -139,7 +139,7 @@ public class TrayApplicationContext : ApplicationContext
                     processesToRemove.Add(processId);
                     string message = $"Process {processId} has been terminated.";
                     trayIcon.ShowBalloonTip(5000, "Process Terminated", message, ToolTipIcon.Warning);
-                    emailService.QueueEmail("Process Terminated", message);
+                    telegramService.QueueNotification("Process Terminated", message);
                 }
             }
 

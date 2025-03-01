@@ -4,7 +4,7 @@ using MUProcessMonitor.Services;
 
 namespace MUProcessMonitor.Forms;
 
-public class ConfigurationForm : Form
+public class ConfigurationEmailForm : Form
 {
     private NumericUpDown nudMaxPercentage, nudTimeout;
     private TextBox txtSMTP, txtPort, txtEmailSender, txtPassword, txtRecipient;
@@ -15,7 +15,7 @@ public class ConfigurationForm : Form
     private EmailService emailService;
     private NotifyIcon trayIcon;
 
-    public ConfigurationForm(NotifyIcon _trayIcon)
+    public ConfigurationEmailForm(NotifyIcon _trayIcon)
     {
         Text = "Configuration";
         Width = 400;
@@ -54,36 +54,30 @@ public class ConfigurationForm : Form
 
         btnSave = new Button() { Text = "Save", Left = 150, Top = 320 };
 
-        btnSave.Click += (s, e) =>
-        {
-            Configuration.MaxPercentageChange = (double)nudMaxPercentage.Value;
-            Configuration.SMTPServer = txtSMTP.Text;
-            Configuration.SMTPPort = int.Parse(txtPort.Text);
-            Configuration.EmailSender = txtEmailSender.Text;
-            Configuration.EmailPassword = txtPassword.Text;
-            Configuration.EmailRecipient = txtRecipient.Text;
-            Configuration.SMTPEnableSsl = chkEnableSsl.Checked;
-            Configuration.SMTPDeliveryMethod = Enum.Parse<SmtpDeliveryMethod>(cmbDeliveryMethod.SelectedItem?.ToString() ?? "Network");
-            Configuration.SMTPTimeout = (int)nudTimeout.Value;
-
-            SaveConfiguration();
-
-            if (SendTestEmail())
-            {
-                trayIcon.ShowBalloonTip(5000, "Success", "Configuration saved and test email sent successfully!", ToolTipIcon.Info);
-                Close();
-            }
-            else
-            {
-                trayIcon.ShowBalloonTip(5000, "Error", "Failed to send test email. Please check the email configuration.", ToolTipIcon.Error);
-            }
-        };
+        btnSave.Click += onSave;
 
         Controls.AddRange(new Control[] { lblMaxPercentage, nudMaxPercentage, lblSMTP, txtSMTP, lblPort, txtPort,
             lblEmailSender, txtEmailSender, lblPassword, txtPassword, lblRecipient, txtRecipient, lblEnableSsl, chkEnableSsl,
             lblDeliveryMethod, cmbDeliveryMethod, lblTimeout, nudTimeout, btnSave });
 
         LoadConfiguration();
+    }
+
+    private void onSave(object? s, EventArgs e)
+    {
+        SetConfiguration();
+
+        SaveConfiguration();
+
+        if (SendTestEmail())
+        {
+            trayIcon.ShowBalloonTip(5000, "Success", "Configuration saved and test email sent successfully!", ToolTipIcon.Info);
+            Close();
+        }
+        else
+        {
+            trayIcon.ShowBalloonTip(5000, "Error", "Failed to send test email. Please check the email configuration.", ToolTipIcon.Error);
+        }
     }
 
     private bool SendTestEmail()
@@ -96,6 +90,44 @@ public class ConfigurationForm : Form
         {
             trayIcon.ShowBalloonTip(5000, "Email Sending Error", $"Error sending test email: {ex.Message}", ToolTipIcon.Error);
             return false;
+        }
+    }
+
+    private void LoadConfiguration()
+    {
+        if (File.Exists(configFilePath))
+        {
+            try
+            {
+                var encryptedData = File.ReadAllBytes(configFilePath);
+                if (encryptedData.Length == 0)
+                    GetConfiguration();
+
+                var decryptedData = EncryptionService.Decrypt(encryptedData);
+                var configParts = decryptedData.Split(';');
+
+                Configuration.MaxPercentageChange = double.Parse(configParts[0]);
+                Configuration.SMTPServer = configParts[1];
+                Configuration.SMTPPort = int.Parse(configParts[2]);
+                Configuration.EmailSender = configParts[3];
+                Configuration.EmailPassword = configParts[4];
+                Configuration.EmailRecipient = configParts[5];
+                Configuration.SMTPEnableSsl = bool.Parse(configParts[6]);
+                Configuration.SMTPDeliveryMethod = Enum.Parse<SmtpDeliveryMethod>(configParts[7]);
+                Configuration.SMTPTimeout = int.Parse(configParts[8]);
+
+                GetConfiguration();
+
+                trayIcon.ShowBalloonTip(5000, "Success", "Configuration loaded successfully!", ToolTipIcon.Info);
+            }
+            catch (Exception ex)
+            {
+                trayIcon.ShowBalloonTip(5000, "Error", $"Failed to load configuration: {ex.Message}", ToolTipIcon.Error);
+            }
+        }
+        else
+        {
+            trayIcon.ShowBalloonTip(5000, "Info", "No configuration file found.", ToolTipIcon.Info);
         }
     }
 
@@ -124,45 +156,7 @@ public class ConfigurationForm : Form
         }
     }
 
-    private void LoadConfiguration()
-    {
-        if (File.Exists(configFilePath))
-        {
-            try
-            {
-                var encryptedData = File.ReadAllBytes(configFilePath);
-                if (encryptedData.Length == 0)
-                    FillConfiguration();
-
-                var decryptedData = EncryptionService.Decrypt(encryptedData);
-                var configParts = decryptedData.Split(';');
-
-                Configuration.MaxPercentageChange = double.Parse(configParts[0]);
-                Configuration.SMTPServer = configParts[1];
-                Configuration.SMTPPort = int.Parse(configParts[2]);
-                Configuration.EmailSender = configParts[3];
-                Configuration.EmailPassword = configParts[4];
-                Configuration.EmailRecipient = configParts[5];
-                Configuration.SMTPEnableSsl = bool.Parse(configParts[6]);
-                Configuration.SMTPDeliveryMethod = Enum.Parse<SmtpDeliveryMethod>(configParts[7]);
-                Configuration.SMTPTimeout = int.Parse(configParts[8]);
-
-                FillConfiguration();
-
-                trayIcon.ShowBalloonTip(5000, "Success", "Configuration loaded successfully!", ToolTipIcon.Info);
-            }
-            catch (Exception ex)
-            {
-                trayIcon.ShowBalloonTip(5000, "Error", $"Failed to load configuration: {ex.Message}", ToolTipIcon.Error);
-            }
-        }
-        else
-        {
-            trayIcon.ShowBalloonTip(5000, "Info", "No configuration file found.", ToolTipIcon.Info);
-        }
-    }
-
-    private void FillConfiguration()
+    private void GetConfiguration()
     {
         nudMaxPercentage.Value = (decimal)Configuration.MaxPercentageChange;
         txtSMTP.Text = Configuration.SMTPServer;
@@ -173,5 +167,18 @@ public class ConfigurationForm : Form
         chkEnableSsl.Checked = Configuration.SMTPEnableSsl;
         cmbDeliveryMethod.SelectedItem = Configuration.SMTPDeliveryMethod.ToString();
         nudTimeout.Value = Configuration.SMTPTimeout;
+    }
+
+    private void SetConfiguration()
+    {
+        Configuration.MaxPercentageChange = (double)nudMaxPercentage.Value;
+        Configuration.SMTPServer = txtSMTP.Text;
+        Configuration.SMTPPort = int.Parse(txtPort.Text);
+        Configuration.EmailSender = txtEmailSender.Text;
+        Configuration.EmailPassword = txtPassword.Text;
+        Configuration.EmailRecipient = txtRecipient.Text;
+        Configuration.SMTPEnableSsl = chkEnableSsl.Checked;
+        Configuration.SMTPDeliveryMethod = Enum.Parse<SmtpDeliveryMethod>(cmbDeliveryMethod.SelectedItem?.ToString() ?? "Network");
+        Configuration.SMTPTimeout = (int)nudTimeout.Value;
     }
 }
