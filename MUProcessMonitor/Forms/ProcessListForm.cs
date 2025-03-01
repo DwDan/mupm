@@ -6,15 +6,16 @@ namespace MUProcessMonitor.Forms;
 public class ProcessListForm : Form
 {
     private ListView listView;
-    private Button btnRefresh, btnStartMonitor, btnStopMonitor;
+    private Button btnRefresh;
     private TrayApplicationContext trayContext;
+    private ContextMenuStrip contextMenuStrip;
 
     public ProcessListForm(TrayApplicationContext context)
     {
         trayContext = context;
         Text = "MU Process Monitor";
-        Width = 400;
-        Height = 300;
+        Width = 500;
+        Height = 400;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterScreen;
         FormClosing += ProcessListForm_FormClosing;
@@ -24,62 +25,84 @@ public class ProcessListForm : Form
             View = View.Details,
             FullRowSelect = true,
             GridLines = true,
-            Width = 360,
-            Height = 200,
+            Width = 480,
+            Height = 300,
             Left = 10,
             Top = 10
         };
+
         listView.Columns.Add("PID", 50);
         listView.Columns.Add("Name", 150);
         listView.Columns.Add("Memory", 100);
-        LoadProcesses();
+        listView.Columns.Add("Status", 100);
 
-        btnRefresh = new Button { Text = "Refresh", Left = 10, Width = 100, Top = 220 };
+        listView.MouseClick += ListView_MouseClick;
+
+        contextMenuStrip = new ContextMenuStrip();
+
+        btnRefresh = new Button { Text = "Refresh", Left = 200, Width = 100, Top = 320 };
         btnRefresh.Click += (s, e) => LoadProcesses();
-
-        btnStartMonitor = new Button { Text = "Start", Left = 120, Width = 80, Top = 220 };
-        btnStartMonitor.Click += (s, e) => StartMonitoring();
-
-        btnStopMonitor = new Button { Text = "Stop", Left = 210, Width = 80, Top = 220 };
-        btnStopMonitor.Click += (s, e) => StopMonitoring();
 
         Controls.Add(listView);
         Controls.Add(btnRefresh);
-        Controls.Add(btnStartMonitor);
-        Controls.Add(btnStopMonitor);
+
+        LoadProcesses();
     }
 
     private void LoadProcesses()
     {
         listView.Items.Clear();
-
         var processes = Process.GetProcesses().Where(p => p.ProcessName.Equals("main", StringComparison.OrdinalIgnoreCase));
 
         foreach (var proc in processes)
         {
+            var status = trayContext.IsMonitoring(proc.Id) ? "Monitoring" : "Not Monitoring";
+
             var item = new ListViewItem(proc.Id.ToString());
             item.SubItems.Add(proc.ProcessName);
             item.SubItems.Add($"{proc.PrivateMemorySize64 / 1024 / 1024} MB");
+            item.SubItems.Add(status);
+
             listView.Items.Add(item);
         }
     }
 
-    private void StartMonitoring()
+    private void ListView_MouseClick(object? sender, MouseEventArgs e)
     {
-        if (listView.SelectedItems.Count > 0)
+        if (e.Button == MouseButtons.Right && listView.FocusedItem != null && listView.FocusedItem.Bounds.Contains(e.Location))
         {
-            int processId = int.Parse(listView.SelectedItems[0].Text);
-            trayContext.StartMonitoring(processId);
+            contextMenuStrip.Items.Clear();
+
+            int processId = int.Parse(listView.FocusedItem.Text);
+            bool isMonitoring = trayContext.IsMonitoring(processId);
+
+            if (!isMonitoring)
+            {
+                var startItem = new ToolStripMenuItem("Start Monitoring");
+                startItem.Click += (s, ev) => StartMonitoring(processId);
+                contextMenuStrip.Items.Add(startItem);
+            }
+            else
+            {
+                var stopItem = new ToolStripMenuItem("Stop Monitoring");
+                stopItem.Click += (s, ev) => StopMonitoring(processId);
+                contextMenuStrip.Items.Add(stopItem);
+            }
+
+            contextMenuStrip.Show(Cursor.Position);
         }
     }
 
-    private void StopMonitoring()
+    private void StartMonitoring(int processId)
     {
-        if (listView.SelectedItems.Count > 0)
-        {
-            int processId = int.Parse(listView.SelectedItems[0].Text);
-            trayContext.StopMonitoring(processId);
-        }
+        trayContext.StartMonitoring(processId);
+        LoadProcesses();
+    }
+
+    private void StopMonitoring(int processId)
+    {
+        trayContext.StopMonitoring(processId);
+        LoadProcesses();
     }
 
     private void ProcessListForm_FormClosing(object? sender, FormClosingEventArgs e)

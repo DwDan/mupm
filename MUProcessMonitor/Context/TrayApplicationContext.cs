@@ -1,8 +1,7 @@
 ﻿using System.Diagnostics;
-using System.Net;
-using System.Net.Mail;
 using MUProcessMonitor.Forms;
 using MUProcessMonitor.Models;
+using MUProcessMonitor.Services;
 
 namespace MUProcessMonitor.Context;
 
@@ -14,12 +13,13 @@ public class TrayApplicationContext : ApplicationContext
     private Dictionary<int, bool> monitoredProcesses = new();
     private Thread monitorThread;
     private bool isMonitoring = true;
+    private EmailService emailService;
 
     public TrayApplicationContext()
     {
         trayIcon = new NotifyIcon()
         {
-            Icon = SystemIcons.Application,
+            Icon = SystemIcons.Asterisk,
             Visible = true,
             Text = "Process Monitor"
         };
@@ -36,6 +36,13 @@ public class TrayApplicationContext : ApplicationContext
 
         monitorThread = new Thread(MonitorProcesses) { IsBackground = true };
         monitorThread.Start();
+
+        emailService = new EmailService(trayIcon);
+    }
+
+    public bool IsMonitoring(int processId)
+    {
+        return monitoredProcesses.ContainsKey(processId);
     }
 
     private void OnOpen(object? sender, EventArgs e)
@@ -120,7 +127,8 @@ public class TrayApplicationContext : ApplicationContext
                         {
                             string message = $"Process {processId} increased memory usage by {percentageChange:F2}%!";
                             trayIcon.ShowBalloonTip(5000, "Memory Alert", message, ToolTipIcon.Warning);
-                            SendEmail("Memory Alert", message);
+                            emailService.QueueEmail("Memory Alert", message);
+
                         }
                     }
 
@@ -131,7 +139,7 @@ public class TrayApplicationContext : ApplicationContext
                     processesToRemove.Add(processId);
                     string message = $"Process {processId} has been terminated.";
                     trayIcon.ShowBalloonTip(5000, "Process Terminated", message, ToolTipIcon.Warning);
-                    SendEmail("Process Terminated", message);
+                    emailService.QueueEmail("Process Terminated", message);
                 }
             }
 
@@ -139,32 +147,6 @@ public class TrayApplicationContext : ApplicationContext
             {
                 StopMonitoring(processId);
             }
-        }
-    }
-
-    private void SendEmail(string subject, string message)
-    {
-        try
-        {
-            using (var client = new SmtpClient(Configuration.SMTPServer, Configuration.SMTPPort))
-            {
-                client.Credentials = new NetworkCredential(Configuration.EmailSender, Configuration.EmailPassword);
-                client.EnableSsl = true;
-
-                var mailMessage = new MailMessage
-                {
-                    From = new MailAddress(Configuration.EmailSender),
-                    Subject = subject,
-                    Body = message
-                };
-
-                mailMessage.To.Add(Configuration.EmailRecipient);
-                client.Send(mailMessage);
-            }
-        }
-        catch (Exception ex)
-        {
-            trayIcon.ShowBalloonTip(5000, "Email Sending Error", ex.Message, ToolTipIcon.Error);
         }
     }
 }
