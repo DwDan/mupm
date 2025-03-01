@@ -16,6 +16,7 @@ public class ConfigurationTelegramForm : Form
         Text = "Configuration";
         Width = 400;
         Height = 250;
+        Icon = SystemIcons.Asterisk;
 
         trayIcon = _trayIcon;
 

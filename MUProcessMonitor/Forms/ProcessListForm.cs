@@ -20,6 +20,7 @@ public class ProcessListForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         FormClosing += trayContext.OnExit;
         Resize += ProcessListForm_Resize;
+        Icon = SystemIcons.Asterisk;
 
         listView = new ListView
         {

@@ -5,3 +5,7 @@
 /.vs
 /MUProcessMonitor/bin/Debug/net8.0-windows
 /MUProcessMonitor/obj
+/MUProcessMonitor/bin/Release/net8.0-windows
+/MUProcessMonitor/Properties/PublishProfiles
+/MUProcessMonitor/MUProcessMonitor.csproj.user
+/MUProcessMonitor/MUProcessMonitor.csproj.user
