@@ -16,6 +16,9 @@ public class TelegramService
         this.trayIcon = trayIcon;
         messageMonitorThread = new Thread(MonitorMessageQueue) { IsBackground = true };
         messageMonitorThread.Start();
+
+        ServicePointManager.SecurityProtocol =
+            SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
     }
 
     public bool QueueNotification(string title, string message)
@@ -37,9 +40,8 @@ public class TelegramService
         while (true)
         {
             if (messageQueue.TryDequeue(out var messageData) && IsInternetAvailable())
-            {
                 SendNotificationDirectly(messageData.Title, messageData.Message);
-            }
+
             Thread.Sleep(5000);
         }
     }
@@ -48,9 +50,9 @@ public class TelegramService
     {
         try
         {
-            using var client = new WebClient();
-            using (client.OpenRead("http://www.google.com"))
-                return true;
+            using var client = new HttpClient();
+            var response = client.GetAsync("http://www.google.com").Result;
+            return response.IsSuccessStatusCode;
         }
         catch
         {

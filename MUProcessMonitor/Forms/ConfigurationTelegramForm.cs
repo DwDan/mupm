@@ -5,7 +5,6 @@ namespace MUProcessMonitor.Forms;
 
 public class ConfigurationTelegramForm : Form
 {
-    private NumericUpDown nudMaxPercentage;
     private TextBox txtBotToken, txtChatId;
     private Button btnSave;
     private readonly string configFilePath = "config.dat";
@@ -15,24 +14,21 @@ public class ConfigurationTelegramForm : Form
     {
         Text = "Configuration";
         Width = 400;
-        Height = 250;
+        Height = 200;
         Icon = SystemIcons.Asterisk;
 
         trayIcon = _trayIcon;
 
-        Label lblMaxPercentage = new Label() { Text = "Max % Change:", Left = 10, Top = 20 };
-        nudMaxPercentage = new NumericUpDown() { Left = 130, Top = 20, Width = 50 };
+        Label lblBotToken = new Label() { Text = "Telegram Bot Token:", Left = 10, Top = 20 };
+        txtBotToken = new TextBox() { Left = 130, Top = 20, Width = 230 };
 
-        Label lblBotToken = new Label() { Text = "Telegram Bot Token:", Left = 10, Top = 60 };
-        txtBotToken = new TextBox() { Left = 130, Top = 60, Width = 230 };
+        Label lblChatId = new Label() { Text = "Telegram Chat ID:", Left = 10, Top = 60 };
+        txtChatId = new TextBox() { Left = 130, Top = 60, Width = 230 };
 
-        Label lblChatId = new Label() { Text = "Telegram Chat ID:", Left = 10, Top = 100 };
-        txtChatId = new TextBox() { Left = 130, Top = 100, Width = 230 };
-
-        btnSave = new Button() { Text = "Save", Left = 150, Top = 150 };
+        btnSave = new Button() { Text = "Save", Left = 150, Top = 100 };
         btnSave.Click += onSave;
 
-        Controls.AddRange(new Control[] { lblMaxPercentage, nudMaxPercentage, lblBotToken, txtBotToken, lblChatId, txtChatId, btnSave });
+        Controls.AddRange(new Control[] { lblBotToken, txtBotToken, lblChatId, txtChatId, btnSave });
 
         LoadConfiguration();
     }
@@ -80,11 +76,10 @@ public class ConfigurationTelegramForm : Form
                 var decryptedData = EncryptionService.Decrypt(encryptedData);
                 var configParts = decryptedData.Split(';');
 
-                if (configParts.Length == 3)
+                if (configParts.Length == 2)
                 {
-                    Configuration.MaxPercentageChange = double.Parse(configParts[0]);
-                    Configuration.BotToken = configParts[1];
-                    Configuration.ChatId = configParts[2];
+                    Configuration.BotToken = configParts[0];
+                    Configuration.ChatId = configParts[1];
 
                     GetConfiguration();
 
@@ -110,7 +105,7 @@ public class ConfigurationTelegramForm : Form
     {
         try
         {
-            var configData = $"{Configuration.MaxPercentageChange};{Configuration.BotToken};{Configuration.ChatId}";
+            var configData = $"{Configuration.BotToken};{Configuration.ChatId}";
 
             var encryptedData = EncryptionService.Encrypt(configData);
             if (encryptedData.Length > 0)
@@ -131,14 +126,12 @@ public class ConfigurationTelegramForm : Form
 
     private void GetConfiguration()
     {
-        nudMaxPercentage.Value = (decimal)Configuration.MaxPercentageChange;
         txtBotToken.Text = Configuration.BotToken;
         txtChatId.Text = Configuration.ChatId;
     }
 
     private void SetConfiguration()
     {
-        Configuration.MaxPercentageChange = (double)nudMaxPercentage.Value;
         Configuration.BotToken = txtBotToken.Text;
         Configuration.ChatId = txtChatId.Text;
     }
