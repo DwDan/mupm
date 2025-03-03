@@ -100,6 +100,7 @@ public class TrayApplicationContextWindows : ApplicationContext
         {
             monitoredWindows.Remove(windowHandle);
             trayIcon.ShowBalloonTip(3000, "Monitoring", $"Monitoring stopped for window {windowHandle}.", ToolTipIcon.Info);
+            windowListForm.SafeLoadWindows();
         }
     }
 

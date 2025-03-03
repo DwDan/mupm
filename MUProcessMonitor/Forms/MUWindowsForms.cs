@@ -78,6 +78,18 @@ public class MUWindowListForm : Form
         LoadWindows();
     }
 
+    public void SafeLoadWindows()
+    {
+        if (InvokeRequired)
+        {
+            Invoke(new Action(LoadWindows));
+        }
+        else
+        {
+            LoadWindows();
+        }
+    }
+
     private void LoadWindows()
     {
         listView.Items.Clear();
