@@ -6,21 +6,25 @@ namespace MUProcessMonitor.Forms;
 public class ConfigurationTelegramForm : Form
 {
     private TextBox txtBotToken, txtChatId;
+    private CheckBox chkUseAlarm;
+    private ComboBox cmbAlarmSound;
     private Button btnSave;
     private readonly string configFilePath = "config.dat";
     private NotifyIcon trayIcon;
+    private AlarmService alarmService;
 
     public ConfigurationTelegramForm(NotifyIcon _trayIcon)
     {
         Text = "Configuration";
         Width = 400;
-        Height = 200;
+        Height = 280;
 
         string basePath = AppDomain.CurrentDomain.BaseDirectory;
         string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
         Icon = new Icon(resourcePath);
 
         trayIcon = _trayIcon;
+        alarmService = new AlarmService();
 
         Label lblBotToken = new Label() { Text = "Telegram Bot Token:", Left = 10, Top = 20 };
         txtBotToken = new TextBox() { Left = 130, Top = 20, Width = 230 };
@@ -28,12 +32,29 @@ public class ConfigurationTelegramForm : Form
         Label lblChatId = new Label() { Text = "Telegram Chat ID:", Left = 10, Top = 60 };
         txtChatId = new TextBox() { Left = 130, Top = 60, Width = 230 };
 
-        btnSave = new Button() { Text = "Save", Left = 150, Top = 100 };
+        chkUseAlarm = new CheckBox() { Text = "Use Alarm", Left = 130, Top = 100, Width = 230 };
+
+        Label lblAlarmSound = new Label() { Text = "Alarm Sound:", Left = 10, Top = 140 };
+        cmbAlarmSound = new ComboBox() { Left = 130, Top = 140, Width = 230 };
+        cmbAlarmSound.Items.AddRange(new string[] { "None", "alert_1.mp3", "alert_2.mp3", "alert_3.mp3", "alert_4.mp3",
+            "alert_5.mp3", "alert_6.mp3", "alert_7.mp3", "alert_8.mp3", "alert_9.mp3", "alert_10.mp3" });
+        cmbAlarmSound.SelectedIndexChanged += (s, e) => PlaySelectedSound();
+
+        btnSave = new Button() { Text = "Save", Left = 150, Top = 180 };
         btnSave.Click += onSave;
 
-        Controls.AddRange(new Control[] { lblBotToken, txtBotToken, lblChatId, txtChatId, btnSave });
+        Controls.AddRange(new Control[] { lblBotToken, txtBotToken, lblChatId, txtChatId, chkUseAlarm, lblAlarmSound, cmbAlarmSound, btnSave });
 
         LoadConfiguration();
+    }
+
+    private async void PlaySelectedSound()
+    {
+        string selectedSound = cmbAlarmSound.SelectedItem?.ToString() ?? "None";
+        if (selectedSound != "None")
+            await alarmService.Start(selectedSound);
+        else
+            alarmService.Stop();
     }
 
     private void onSave(object? s, EventArgs e)
@@ -50,6 +71,8 @@ public class ConfigurationTelegramForm : Form
         {
             trayIcon.ShowBalloonTip(5000, "Error", "Failed to send test notification. Please check the Telegram configuration.", ToolTipIcon.Error);
         }
+
+        alarmService.Stop();
     }
 
     private bool SendTestNotification()
@@ -79,10 +102,12 @@ public class ConfigurationTelegramForm : Form
                 var decryptedData = EncryptionService.Decrypt(encryptedData);
                 var configParts = decryptedData.Split(';');
 
-                if (configParts.Length == 2)
+                if (configParts.Length == 4)
                 {
                     Configuration.BotToken = configParts[0];
                     Configuration.ChatId = configParts[1];
+                    Configuration.UseAlarm = bool.Parse(configParts[2]);
+                    Configuration.AlarmSound = configParts[3];
 
                     GetConfiguration();
 
@@ -108,7 +133,7 @@ public class ConfigurationTelegramForm : Form
     {
         try
         {
-            var configData = $"{Configuration.BotToken};{Configuration.ChatId}";
+            var configData = $"{Configuration.BotToken};{Configuration.ChatId};{Configuration.UseAlarm};{Configuration.AlarmSound}";
 
             var encryptedData = EncryptionService.Encrypt(configData);
             if (encryptedData.Length > 0)
@@ -131,11 +156,15 @@ public class ConfigurationTelegramForm : Form
     {
         txtBotToken.Text = Configuration.BotToken;
         txtChatId.Text = Configuration.ChatId;
+        chkUseAlarm.Checked = Configuration.UseAlarm;
+        cmbAlarmSound.SelectedItem = Configuration.AlarmSound;
     }
 
     private void SetConfiguration()
     {
         Configuration.BotToken = txtBotToken.Text;
         Configuration.ChatId = txtChatId.Text;
+        Configuration.UseAlarm = chkUseAlarm.Checked;
+        Configuration.AlarmSound = cmbAlarmSound.SelectedItem?.ToString() ?? "None";
     }
 }

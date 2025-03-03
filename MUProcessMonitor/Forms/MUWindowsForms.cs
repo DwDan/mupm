@@ -8,7 +8,7 @@ namespace MUProcessMonitor.Forms;
 public class MUWindowListForm : Form
 {
     private ListView listView;
-    private Button btnRefresh, btnConfigure, btnMinimize;
+    private Button btnRefresh, btnConfigure, btnStopAlarm;
     private TrayApplicationContextWindows trayContext;
     private ContextMenuStrip contextMenuStrip;
     private HelperMonitorService helperMonitorService;
@@ -67,13 +67,13 @@ public class MUWindowListForm : Form
         btnConfigure = new Button { Text = "Configure", Left = 210, Width = 100, Top = 320 };
         btnConfigure.Click += (s, e) => trayContext.OnConfigure(s, e);
 
-        btnMinimize = new Button { Text = "Minimize", Left = 320, Width = 100, Top = 320 };
-        btnMinimize.Click += (s, e) => WindowState = FormWindowState.Minimized;
+        btnStopAlarm = new Button { Text = "Stop Alarm", Left = 320, Width = 100, Top = 320 };
+        btnStopAlarm.Click += (s, e) => trayContext.StopAlarm(s, e);
 
         Controls.Add(listView);
         Controls.Add(btnRefresh);
         Controls.Add(btnConfigure);
-        Controls.Add(btnMinimize);
+        Controls.Add(btnStopAlarm);
 
         LoadWindows();
     }

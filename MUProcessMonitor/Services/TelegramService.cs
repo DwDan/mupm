@@ -18,7 +18,7 @@ public class TelegramService
         messageMonitorThread.Start();
 
         ServicePointManager.SecurityProtocol =
-            SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+            SecurityProtocolType.Tls13 | SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
     }
 
     public bool QueueNotification(string title, string message)
@@ -51,7 +51,7 @@ public class TelegramService
         try
         {
             using var client = new HttpClient();
-            var response = client.GetAsync("http://www.google.com").Result;
+            var response = client.GetAsync("https://www.google.com").Result;
             return response.IsSuccessStatusCode;
         }
         catch
