@@ -5,7 +5,7 @@ namespace MUProcessMonitor.Forms;
 
 public class ConfigurationTelegramForm : Form
 {
-    private TextBox txtBotToken, txtChatId;
+    private TextBox txtBotToken, txtChatId, txtThreadSleep;
     private CheckBox chkUseAlarm;
     private ComboBox cmbAlarmSound;
     private Button btnSave;
@@ -17,7 +17,7 @@ public class ConfigurationTelegramForm : Form
     {
         Text = "Configuration";
         Width = 400;
-        Height = 280;
+        Height = 320;
 
         string basePath = AppDomain.CurrentDomain.BaseDirectory;
         string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
@@ -40,10 +40,13 @@ public class ConfigurationTelegramForm : Form
             "alert_5.mp3", "alert_6.mp3", "alert_7.mp3", "alert_8.mp3", "alert_9.mp3", "alert_10.mp3" });
         cmbAlarmSound.SelectedIndexChanged += (s, e) => PlaySelectedSound();
 
-        btnSave = new Button() { Text = "Save", Left = 150, Top = 180 };
+        Label lblThreadSleep = new Label() { Text = "Monitor Interval (ms):", Left = 10, Top = 180 };
+        txtThreadSleep = new TextBox() { Left = 130, Top = 180, Width = 230, Text = Configuration.ThreadSleepTime.ToString() };
+
+        btnSave = new Button() { Text = "Save", Left = 150, Top = 220 };
         btnSave.Click += onSave;
 
-        Controls.AddRange(new Control[] { lblBotToken, txtBotToken, lblChatId, txtChatId, chkUseAlarm, lblAlarmSound, cmbAlarmSound, btnSave });
+        Controls.AddRange(new Control[] { lblBotToken, txtBotToken, lblChatId, txtChatId, chkUseAlarm, lblAlarmSound, cmbAlarmSound, lblThreadSleep, txtThreadSleep, btnSave });
 
         LoadConfiguration();
     }
@@ -102,14 +105,13 @@ public class ConfigurationTelegramForm : Form
                 var decryptedData = EncryptionService.Decrypt(encryptedData);
                 var configParts = decryptedData.Split(';');
 
-                if (configParts.Length == 4)
+                if (configParts.Length == 5)
                 {
                     Configuration.BotToken = configParts[0];
                     Configuration.ChatId = configParts[1];
                     Configuration.UseAlarm = bool.Parse(configParts[2]);
                     Configuration.AlarmSound = configParts[3];
-
-                    GetConfiguration();
+                    Configuration.ThreadSleepTime = int.Parse(configParts[4]);
 
                     trayIcon.ShowBalloonTip(5000, "Success", "Configuration loaded successfully!", ToolTipIcon.Info);
                 }
@@ -117,6 +119,8 @@ public class ConfigurationTelegramForm : Form
                 {
                     trayIcon.ShowBalloonTip(5000, "Error", "Configuration file is invalid or corrupted.", ToolTipIcon.Error);
                 }
+
+                GetConfiguration();
             }
             catch (Exception ex)
             {
@@ -133,7 +137,7 @@ public class ConfigurationTelegramForm : Form
     {
         try
         {
-            var configData = $"{Configuration.BotToken};{Configuration.ChatId};{Configuration.UseAlarm};{Configuration.AlarmSound}";
+            var configData = $"{Configuration.BotToken};{Configuration.ChatId};{Configuration.UseAlarm};{Configuration.AlarmSound};{Configuration.ThreadSleepTime}";
 
             var encryptedData = EncryptionService.Encrypt(configData);
             if (encryptedData.Length > 0)
@@ -154,10 +158,11 @@ public class ConfigurationTelegramForm : Form
 
     private void GetConfiguration()
     {
-        txtBotToken.Text = Configuration.BotToken;
-        txtChatId.Text = Configuration.ChatId;
+        txtBotToken.Text = Configuration.BotToken ?? "your-bot-token";
+        txtChatId.Text = Configuration.ChatId ?? "your-chat-id";
         chkUseAlarm.Checked = Configuration.UseAlarm;
-        cmbAlarmSound.SelectedItem = Configuration.AlarmSound;
+        cmbAlarmSound.SelectedItem = Configuration.AlarmSound ?? "alert_1.mp3";
+        txtThreadSleep.Text = Configuration.ThreadSleepTime.ToString();
     }
 
     private void SetConfiguration()
@@ -166,5 +171,7 @@ public class ConfigurationTelegramForm : Form
         Configuration.ChatId = txtChatId.Text;
         Configuration.UseAlarm = chkUseAlarm.Checked;
         Configuration.AlarmSound = cmbAlarmSound.SelectedItem?.ToString() ?? "None";
+        int.TryParse(txtThreadSleep.Text, out int threadSleep);
+        Configuration.ThreadSleepTime = threadSleep > 0 ? threadSleep : 60000;
     }
 }

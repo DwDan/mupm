@@ -15,5 +15,6 @@ public static class Configuration
     public static string BotToken { get; set; } = "your-bot-token";
     public static string ChatId { get; set; } = "your-chat-id";
     public static bool UseAlarm { get; set; } = true;
-    public static string AlarmSound { get; set; } = "alert_1.mp3";
+    public static string AlarmSound { get; set; } = "None";
+    public static int ThreadSleepTime { get; set; } = 60000;
 }

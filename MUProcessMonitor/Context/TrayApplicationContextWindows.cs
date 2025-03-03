@@ -108,7 +108,7 @@ public class TrayApplicationContextWindows : ApplicationContext
     {
         while (isMonitoring)
         {
-            Thread.Sleep(5000);
+            Thread.Sleep(Configuration.ThreadSleepTime);
 
             foreach (var windowHandle in monitoredWindows.Keys.ToList())
             {
