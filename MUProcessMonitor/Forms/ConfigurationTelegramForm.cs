@@ -15,7 +15,10 @@ public class ConfigurationTelegramForm : Form
         Text = "Configuration";
         Width = 400;
         Height = 200;
-        Icon = SystemIcons.Asterisk;
+
+        string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
+        Icon = new Icon(resourcePath);
 
         trayIcon = _trayIcon;
 

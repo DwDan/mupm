@@ -11,6 +11,7 @@
   <ItemGroup>
     <None Remove="Resources\helper_off.png" />
     <None Remove="Resources\helper_on.png" />
+    <None Remove="Resources\icon_mupm.ico" />
     <None Remove="Resources\play_icon.png" />
   </ItemGroup>
 
@@ -27,6 +28,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="Resources\helper_on.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Resources\icon_mupm.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="Resources\play_icon.png">

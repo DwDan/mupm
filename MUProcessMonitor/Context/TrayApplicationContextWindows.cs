@@ -15,9 +15,12 @@ public class TrayApplicationContextWindows : ApplicationContext
 
     public TrayApplicationContextWindows()
     {
+        string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
+
         trayIcon = new NotifyIcon()
         {
-            Icon = SystemIcons.Asterisk,
+            Icon = new Icon(resourcePath),
             Visible = true,
             Text = "Window Monitor"
         };

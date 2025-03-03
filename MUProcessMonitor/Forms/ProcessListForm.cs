@@ -20,7 +20,10 @@ public class ProcessListForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         FormClosing += trayContext.OnExit;
         Resize += ProcessListForm_Resize;
-        Icon = SystemIcons.Asterisk;
+
+        string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
+        Icon = new Icon(resourcePath);
 
         listView = new ListView
         {

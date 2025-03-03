@@ -37,7 +37,10 @@ public class MUWindowListForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         FormClosing += trayContext.OnExit;
         Resize += WindowListForm_Resize;
-        Icon = SystemIcons.Asterisk;
+
+        string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
+        Icon = new Icon(resourcePath);
 
         listView = new ListView
         {
@@ -142,13 +145,16 @@ public class MUWindowListForm : Form
 
     private void ShowScreenshot(Bitmap screenshot)
     {
+        string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
+
         var screenshotForm = new Form
         {
             Text = "Screenshot Preview",
             Width = screenshot.Width + 20,
             Height = screenshot.Height + 40,
             StartPosition = FormStartPosition.CenterScreen,
-            Icon = SystemIcons.Asterisk
+            Icon = new Icon(resourcePath)
         };
 
         var pictureBox = new PictureBox
