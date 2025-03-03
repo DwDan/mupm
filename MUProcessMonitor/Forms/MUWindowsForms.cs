@@ -142,19 +142,20 @@ public class MUWindowListForm : Form
 
     private void ShowScreenshot(Bitmap screenshot)
     {
-        Form screenshotForm = new Form
+        var screenshotForm = new Form
         {
             Text = "Screenshot Preview",
             Width = screenshot.Width + 20,
             Height = screenshot.Height + 40,
-            StartPosition = FormStartPosition.CenterScreen
+            StartPosition = FormStartPosition.CenterScreen,
+            Icon = SystemIcons.Asterisk
         };
 
-        PictureBox pictureBox = new PictureBox
+        var pictureBox = new PictureBox
         {
             Image = screenshot,
             Dock = DockStyle.Fill,
-            SizeMode = PictureBoxSizeMode.StretchImage
+            SizeMode = PictureBoxSizeMode.StretchImage,
         };
 
         screenshotForm.Controls.Add(pictureBox);
