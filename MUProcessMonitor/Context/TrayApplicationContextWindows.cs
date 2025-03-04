@@ -8,10 +8,10 @@ public class TrayApplicationContextWindows : ApplicationContext
 {
     public NotificationManager NotificationManager;
     public AlarmManager AlarmManager;
+    public ConfigurationManager ConfigurationManager;
 
     private NotifyIcon _trayIcon;
     private MUWindowListForm _windowListForm;
-    private ConfigurationTelegramForm _configurationTelegramForm;
     private WindowMonitorService _windowMonitorService;
 
     public TrayApplicationContextWindows()
@@ -20,10 +20,8 @@ public class TrayApplicationContextWindows : ApplicationContext
 
         NotificationManager = new NotificationManager(_trayIcon ?? throw new ArgumentNullException(nameof(_trayIcon)));
         AlarmManager = new AlarmManager();
-
-
-        _configurationTelegramForm = new ConfigurationTelegramForm(_trayIcon);
-        _configurationTelegramForm.LoadConfiguration();
+        ConfigurationManager = new ConfigurationManager();
+        ConfigurationManager.LoadConfiguration();
 
         _windowMonitorService = new WindowMonitorService(this);
 
@@ -66,7 +64,8 @@ public class TrayApplicationContextWindows : ApplicationContext
 
     public void OnConfigure(object? sender, EventArgs e)
     {
-        _configurationTelegramForm.ShowDialog();
+        using ConfigurationTelegramForm form = new ConfigurationTelegramForm(this);
+        form.ShowDialog();
     }
 
     public void OnExit(object? sender, EventArgs e)

@@ -4,7 +4,7 @@ namespace MUProcessMonitor.Manager;
 
 public class AlarmManager
 {
-    private readonly AlarmService alarmService = new();
+    private readonly AlarmService _alarmService = new();
     private bool isAlarmPlaying = false;
 
     public void StartAlarm()
@@ -16,7 +16,7 @@ public class AlarmManager
         {
             while (isAlarmPlaying)
             {
-                alarmService.Start().Wait();
+                _alarmService.Start().Wait();
             }
         })
         { IsBackground = true }.Start();
@@ -25,7 +25,15 @@ public class AlarmManager
     public void StopAlarm()
     {
         isAlarmPlaying = false;
-        alarmService.Stop();
+        _alarmService.Stop();
+    }
+
+    public async Task PlaySelectedSound(string selectedSound = "None")
+    {
+        if (selectedSound != "None")
+            await _alarmService.Start(selectedSound);
+        else
+            _alarmService.Stop();
     }
 }
 

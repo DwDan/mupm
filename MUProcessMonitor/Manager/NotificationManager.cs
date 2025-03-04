@@ -29,5 +29,10 @@ public class NotificationManager
 
         ShowBalloonTip(title, message, icon, duration);
     }
+
+    public bool SendTestNotification()
+    {
+        return _telegramService.QueueNotification("Test Notification", "Validating the configuration.");
+    }
 }
 

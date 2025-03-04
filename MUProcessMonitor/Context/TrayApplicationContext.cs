@@ -62,7 +62,7 @@ public class TrayApplicationContext : ApplicationContext
 
     public void OnConfigure(object? sender, EventArgs e)
     {
-        using (var form = new ConfigurationTelegramForm(trayIcon))
+        using (var form = new ConfigurationEmailForm(trayIcon))
         {
             form.ShowDialog();
         }
