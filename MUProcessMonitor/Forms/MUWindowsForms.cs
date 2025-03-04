@@ -23,6 +23,10 @@ public class MUWindowListForm : Form
         _windowMonitorManager.MonitoringUpdated += SafeLoadWindows;
         _configurationManager.LoadConfiguration();
 
+        string basePath = AppDomain.CurrentDomain.BaseDirectory;
+        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
+        Icon = new Icon(resourcePath);
+
         Text = "MU Window Monitor";
         Width = 500;
         Height = 400;
