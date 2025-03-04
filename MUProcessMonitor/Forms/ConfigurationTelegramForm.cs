@@ -63,6 +63,7 @@ public class ConfigurationTelegramForm : Form
     private void onSave(object? s, EventArgs e)
     {
         SetConfiguration();
+
         SaveConfiguration();
 
         if (SendTestNotification())
@@ -82,7 +83,7 @@ public class ConfigurationTelegramForm : Form
     {
         try
         {
-            var telegramService = new Services.TelegramService(trayIcon);
+            var telegramService = new TelegramService(trayIcon);
             return telegramService.QueueNotification("Test Notification", "This is a test notification to validate the configuration.");
         }
         catch (Exception ex)
@@ -112,8 +113,6 @@ public class ConfigurationTelegramForm : Form
                     Configuration.UseAlarm = bool.Parse(configParts[2]);
                     Configuration.AlarmSound = configParts[3];
                     Configuration.ThreadSleepTime = int.Parse(configParts[4]);
-
-                    trayIcon.ShowBalloonTip(5000, "Success", "Configuration loaded successfully!", ToolTipIcon.Info);
                 }
                 else
                 {
@@ -143,7 +142,6 @@ public class ConfigurationTelegramForm : Form
             if (encryptedData.Length > 0)
             {
                 File.WriteAllBytes(configFilePath, encryptedData);
-                trayIcon.ShowBalloonTip(5000, "Success", "Configuration file saved successfully!", ToolTipIcon.Info);
             }
             else
             {

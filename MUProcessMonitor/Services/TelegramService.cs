@@ -1,57 +1,62 @@
 ﻿using System.Collections.Concurrent;
-using System.Net;
+using System.Net.Http.Json;
 using MUProcessMonitor.Models;
 
 namespace MUProcessMonitor.Services;
 
-public class TelegramService
+public class TelegramService : IDisposable
 {
-    private static readonly HttpClient httpClient = new HttpClient();
+    private static readonly HttpClient httpClient;
     private NotifyIcon trayIcon;
     private ConcurrentQueue<(string Title, string Message)> messageQueue = new();
-    private Thread messageMonitorThread;
+    private CancellationTokenSource cancellationTokenSource = new();
+
+    static TelegramService()
+    {
+        var handler = new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
+            SslProtocols = System.Security.Authentication.SslProtocols.Tls12 |
+                           System.Security.Authentication.SslProtocols.Tls13
+        };
+
+        httpClient = new HttpClient(handler);
+    }
 
     public TelegramService(NotifyIcon trayIcon)
     {
         this.trayIcon = trayIcon;
-        messageMonitorThread = new Thread(MonitorMessageQueue) { IsBackground = true };
-        messageMonitorThread.Start();
 
-        ServicePointManager.SecurityProtocol =
-            SecurityProtocolType.Tls13 | SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+        Task.Run(() => MonitorMessageQueue(cancellationTokenSource.Token), cancellationTokenSource.Token);
     }
 
     public bool QueueNotification(string title, string message)
     {
-        if (IsInternetAvailable())
-        {
-            return SendNotificationDirectly(title, message);
-        }
-        else
-        {
-            messageQueue.Enqueue((title, message));
-            trayIcon.ShowBalloonTip(5000, "Notification Queued", "Internet not available. Notification added to the queue.", ToolTipIcon.Info);
-            return false;
-        }
+        messageQueue.Enqueue((title, message));
+        return true;
     }
 
-    private void MonitorMessageQueue()
+    private async Task MonitorMessageQueue(CancellationToken cancellationToken)
     {
-        while (true)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            if (messageQueue.TryDequeue(out var messageData) && IsInternetAvailable())
-                SendNotificationDirectly(messageData.Title, messageData.Message);
+            if (messageQueue.TryPeek(out var messageData) && await IsInternetAvailableAsync())
+            {
+                if (await SendNotificationAsync(messageData.Title, messageData.Message))
+                {
+                    messageQueue.TryDequeue(out _);
+                }
+            }
 
-            Thread.Sleep(5000);
+            await Task.Delay(5000, cancellationToken);
         }
     }
 
-    private bool IsInternetAvailable()
+    private async Task<bool> IsInternetAvailableAsync()
     {
         try
         {
-            using var client = new HttpClient();
-            var response = client.GetAsync("https://www.google.com").Result;
+            using var response = await httpClient.GetAsync("https://www.google.com");
             return response.IsSuccessStatusCode;
         }
         catch
@@ -60,30 +65,39 @@ public class TelegramService
         }
     }
 
-    private bool SendNotificationDirectly(string title, string message)
+    private async Task<bool> SendNotificationAsync(string title, string message)
     {
         var botToken = Configuration.BotToken;
         var chatId = Configuration.ChatId;
-        var url = $"https://api.telegram.org/bot{botToken}/sendMessage?chat_id={chatId}&text={title}: {message}";
+        var url = $"https://api.telegram.org/bot{botToken}/sendMessage";
+
+        var content = JsonContent.Create(new
+        {
+            chat_id = chatId,
+            text = $"{title}: {message}"
+        });
 
         try
         {
-            var response = httpClient.GetAsync(url).Result;
+            var response = await httpClient.PostAsync(url, content);
             if (!response.IsSuccessStatusCode)
             {
                 trayIcon.ShowBalloonTip(5000, "Telegram Error", $"Failed to send notification: {response.StatusCode}", ToolTipIcon.Error);
                 return false;
             }
-            else
-            {
-                trayIcon.ShowBalloonTip(5000, "Telegram Notification", $"Notification sent: {title}", ToolTipIcon.Info);
-                return true;
-            }
+
+            return true;
         }
         catch (Exception ex)
         {
             trayIcon.ShowBalloonTip(5000, "Telegram Error", $"Error: {ex.Message}", ToolTipIcon.Error);
             return false;
         }
+    }
+
+    public void Dispose()
+    {
+        cancellationTokenSource.Cancel();
+        httpClient?.Dispose();
     }
 }
