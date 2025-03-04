@@ -8,6 +8,7 @@ public class TrayApplicationContextWindows : ApplicationContext
 {
     private NotifyIcon trayIcon;
     private MUWindowListForm windowListForm;
+    private ConfigurationTelegramForm configurationTelegramForm;
     private Dictionary<int, bool> monitoredWindows = new();
     private Thread monitorThread;
     private TelegramService telegramService;
@@ -41,6 +42,9 @@ public class TrayApplicationContextWindows : ApplicationContext
         windowListForm = new MUWindowListForm(this);
         windowListForm.Show();
 
+        configurationTelegramForm = new ConfigurationTelegramForm(trayIcon);
+        configurationTelegramForm.LoadConfiguration();
+
         monitorThread = new Thread(MonitorWindows) { IsBackground = true };
         monitorThread.Start();
 
@@ -57,9 +61,7 @@ public class TrayApplicationContextWindows : ApplicationContext
     private void OnOpen(object? sender, EventArgs e)
     {
         if (windowListForm.IsDisposed)
-        {
             windowListForm = new MUWindowListForm(this);
-        }
 
         windowListForm.Show();
         windowListForm.WindowState = FormWindowState.Normal;
@@ -68,17 +70,14 @@ public class TrayApplicationContextWindows : ApplicationContext
 
     public void OnConfigure(object? sender, EventArgs e)
     {
-        using (var form = new ConfigurationTelegramForm(trayIcon))
-        {
-            form.ShowDialog();
-        }
+        configurationTelegramForm.ShowDialog();
     }
 
     public void OnExit(object? sender, EventArgs e)
     {
         isMonitoring = false;
         isAlarmPlaying = false;
-        stopMonitorEvent.Set(); 
+        stopMonitorEvent.Set();
         monitorThread.Join();
         trayIcon.Visible = false;
         Application.ExitThread();

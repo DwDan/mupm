@@ -93,7 +93,7 @@ public class ConfigurationTelegramForm : Form
         }
     }
 
-    private void LoadConfiguration()
+    public void LoadConfiguration()
     {
         if (File.Exists(configFilePath))
         {
