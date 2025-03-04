@@ -38,7 +38,7 @@ public class ConfigurationTelegramForm : Form
         cmbAlarmSound = new ComboBox() { Left = 130, Top = 140, Width = 230 };
         cmbAlarmSound.Items.AddRange(new string[] { "None", "alert_1.mp3", "alert_2.mp3", "alert_3.mp3", "alert_4.mp3",
             "alert_5.mp3", "alert_6.mp3", "alert_7.mp3", "alert_8.mp3", "alert_9.mp3", "alert_10.mp3" });
-        cmbAlarmSound.SelectedIndexChanged += (s, e) => PlaySelectedSound();
+        cmbAlarmSound.SelectionChangeCommitted += (s, e) => PlaySelectedSound();
 
         Label lblThreadSleep = new Label() { Text = "Monitor Interval (ms):", Left = 10, Top = 180 };
         txtThreadSleep = new TextBox() { Left = 130, Top = 180, Width = 230, Text = Configuration.ThreadSleepTime.ToString() };

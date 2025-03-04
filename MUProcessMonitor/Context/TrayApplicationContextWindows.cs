@@ -13,6 +13,7 @@ public class TrayApplicationContextWindows : ApplicationContext
     private TelegramService telegramService;
     private HelperMonitorService helperMonitorService;
     private AlarmService alarmService;
+    private ManualResetEvent stopMonitorEvent = new ManualResetEvent(false);
     private bool isMonitoring = true;
     private bool isAlarmPlaying = false;
 
@@ -77,10 +78,9 @@ public class TrayApplicationContextWindows : ApplicationContext
     {
         isMonitoring = false;
         isAlarmPlaying = false;
+        stopMonitorEvent.Set(); 
         monitorThread.Join();
-
         trayIcon.Visible = false;
-
         Application.ExitThread();
         Application.Exit();
     }
@@ -108,7 +108,8 @@ public class TrayApplicationContextWindows : ApplicationContext
     {
         while (isMonitoring)
         {
-            Thread.Sleep(Configuration.ThreadSleepTime);
+            if (stopMonitorEvent.WaitOne(Configuration.ThreadSleepTime))
+                break;
 
             foreach (var windowHandle in monitoredWindows.Keys.ToList())
             {

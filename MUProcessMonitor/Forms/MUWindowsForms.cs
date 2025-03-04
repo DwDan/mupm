@@ -47,7 +47,7 @@ public class MUWindowListForm : Form
             View = View.Details,
             FullRowSelect = true,
             GridLines = true,
-            Width = 480,
+            Width = 465,
             Height = 300,
             Left = 10,
             Top = 10
