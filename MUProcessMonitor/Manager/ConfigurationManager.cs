@@ -5,6 +5,10 @@ namespace MUProcessMonitor.Manager;
 
 public class ConfigurationManager
 {
+    private static readonly Lazy<ConfigurationManager> _instance = new(() => new ConfigurationManager());
+    public static ConfigurationManager Instance => _instance.Value;
+
+
     private readonly string configFilePath = "config.dat";
 
     public void LoadConfiguration()

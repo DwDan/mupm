@@ -7,10 +7,13 @@ public class NotificationManager
     private NotifyIcon _trayIcon;
     private TelegramService _telegramService;
 
-    public NotificationManager(NotifyIcon trayIcon)
+    private static readonly Lazy<NotificationManager> _instance = new(() => new NotificationManager());
+    public static NotificationManager Instance => _instance.Value;
+
+    public NotificationManager()
     {
-        _trayIcon = trayIcon;
-        _telegramService = new TelegramService(trayIcon);
+        _trayIcon = TrayIconManager.Instance;
+        _telegramService = new TelegramService();
     }
 
     public void ShowBalloonTip(string title, string message, ToolTipIcon icon = ToolTipIcon.Info, int duration = 5000)

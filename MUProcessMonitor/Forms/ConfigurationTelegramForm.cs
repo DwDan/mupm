@@ -1,4 +1,4 @@
-﻿using MUProcessMonitor.Context;
+﻿using MUProcessMonitor.Manager;
 using MUProcessMonitor.Models;
 
 namespace MUProcessMonitor.Forms;
@@ -11,10 +11,17 @@ public class ConfigurationTelegramForm : Form
     private CheckBox chkUseAlarm = new();
     private ComboBox cmbAlarmSound = new();
     private Button btnSave = new();
-    private TrayApplicationContextWindows _context;
 
-    public ConfigurationTelegramForm(TrayApplicationContextWindows context)
+    public NotificationManager NotificationManager;
+    public AlarmManager AlarmManager;
+    public ConfigurationManager ConfigurationManager;
+
+    public ConfigurationTelegramForm()
     {
+        NotificationManager = NotificationManager.Instance;
+        AlarmManager = AlarmManager.Instance;
+        ConfigurationManager = ConfigurationManager.Instance;
+
         string basePath = AppDomain.CurrentDomain.BaseDirectory;
         string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
         Icon = new Icon(resourcePath);
@@ -22,8 +29,6 @@ public class ConfigurationTelegramForm : Form
         Text = "Configuration";
         Width = 400;
         Height = 320;
-
-        _context = context;
 
         InitializeComponents();
 
@@ -65,31 +70,31 @@ public class ConfigurationTelegramForm : Form
     {
         string selectedSound = cmbAlarmSound.SelectedItem?.ToString() ?? "None";
 
-        await _context.AlarmManager.PlaySelectedSound(selectedSound);
+        await AlarmManager.PlaySelectedSound(selectedSound);
     }
 
     private void onSave(object? sender, EventArgs e)
     {
         SetConfiguration();
-        _context.ConfigurationManager.SaveConfiguration();
+        ConfigurationManager.SaveConfiguration();
 
-        if (_context.NotificationManager.SendTestNotification())
+        if (NotificationManager.SendTestNotification())
         {
-            _context.NotificationManager.ShowBalloonTip("Success", "Configuration saved and test notification sent successfully!");
+            NotificationManager.ShowBalloonTip("Success", "Configuration saved and test notification sent successfully!");
 
             Close();
         }
         else
         {
-            _context.NotificationManager.ShowBalloonTip("Error", "Failed to send test notification.", ToolTipIcon.Error);
+            NotificationManager.ShowBalloonTip("Error", "Failed to send test notification.", ToolTipIcon.Error);
         }
 
-        _context.AlarmManager.StopAlarm();
+        AlarmManager.StopAlarm();
     }
 
     private void LoadConfiguration()
     {
-        _context.ConfigurationManager.LoadConfiguration();
+        ConfigurationManager.LoadConfiguration();
 
         txtBotToken.Text = Configuration.BotToken;
         txtChatId.Text = Configuration.ChatId;

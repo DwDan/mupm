@@ -4,6 +4,9 @@ namespace MUProcessMonitor.Manager;
 
 public class AlarmManager
 {
+    private static readonly Lazy<AlarmManager> _instance = new(() => new AlarmManager());
+    public static AlarmManager Instance => _instance.Value;
+
     private readonly AlarmService _alarmService = new();
     private bool isAlarmPlaying = false;
 

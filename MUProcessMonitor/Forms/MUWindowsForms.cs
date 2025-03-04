@@ -1,48 +1,50 @@
-﻿using System.Runtime.InteropServices;
-using System.Text;
-using MUProcessMonitor.Context;
-using MUProcessMonitor.Services;
+﻿using MUProcessMonitor.Manager;
 
 namespace MUProcessMonitor.Forms;
 
 public class MUWindowListForm : Form
 {
-    private ListView listView;
-    private Button btnRefresh, btnConfigure, btnStopAlarm;
-    private TrayApplicationContextWindows trayContext;
-    private ContextMenuStrip contextMenuStrip;
-    private HelperMonitorService helperMonitorService;
-    private Dictionary<string, Bitmap> screenshotCache;
+    private readonly ListView _listView;
+    private readonly ContextMenuStrip _contextMenuStrip;
 
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+    private readonly NotificationManager _notificationManager;
+    private readonly AlarmManager _alarmManager;
+    private readonly ConfigurationManager _configurationManager;
+    private readonly WindowMonitorManager _windowMonitorManager;
+    private readonly ScreenShotManager _screenShotManager;
 
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
-
-    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-    public MUWindowListForm(TrayApplicationContextWindows context)
+    public MUWindowListForm()
     {
-        trayContext = context;
-        helperMonitorService = new HelperMonitorService();
-        screenshotCache = new Dictionary<string, Bitmap>();
+        _alarmManager = AlarmManager.Instance;
+        _configurationManager = ConfigurationManager.Instance;
+        _screenShotManager = ScreenShotManager.Instance;
+        _notificationManager = NotificationManager.Instance;
+        _windowMonitorManager = WindowMonitorManager.Instance;
+        _windowMonitorManager.MonitoringUpdated += SafeLoadWindows;
+        _configurationManager.LoadConfiguration();
+
         Text = "MU Window Monitor";
         Width = 500;
         Height = 400;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterScreen;
-        FormClosing += trayContext.OnExit;
+        FormClosing += OnExit;
         Resize += WindowListForm_Resize;
 
-        string basePath = AppDomain.CurrentDomain.BaseDirectory;
-        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
-        Icon = new Icon(resourcePath);
+        _listView = InitializeListView();
+        _contextMenuStrip = new ContextMenuStrip();
 
-        listView = new ListView
+        Controls.Add(_listView);
+        Controls.Add(CreateButton("Refresh", 100, 320, (s, e) => LoadWindows()));
+        Controls.Add(CreateButton("Configure", 210, 320, OnConfigure));
+        Controls.Add(CreateButton("Stop Alarm", 320, 320, StopAlarm));
+
+        LoadWindows();
+    }
+
+    private ListView InitializeListView()
+    {
+        var listView = new ListView
         {
             View = View.Details,
             FullRowSelect = true,
@@ -56,147 +58,102 @@ public class MUWindowListForm : Form
         listView.Columns.Add("Handle", 100);
         listView.Columns.Add("Title", 150);
         listView.Columns.Add("Status", 100);
-
         listView.MouseClick += ListView_MouseClick;
 
-        contextMenuStrip = new ContextMenuStrip();
-
-        btnRefresh = new Button { Text = "Refresh", Left = 100, Width = 100, Top = 320 };
-        btnRefresh.Click += (s, e) => LoadWindows();
-
-        btnConfigure = new Button { Text = "Configure", Left = 210, Width = 100, Top = 320 };
-        btnConfigure.Click += (s, e) => trayContext.OnConfigure(s, e);
-
-        btnStopAlarm = new Button { Text = "Stop Alarm", Left = 320, Width = 100, Top = 320 };
-        btnStopAlarm.Click += (s, e) => trayContext.StopAlarm(s, e);
-
-        Controls.Add(listView);
-        Controls.Add(btnRefresh);
-        Controls.Add(btnConfigure);
-        Controls.Add(btnStopAlarm);
-
-        LoadWindows();
+        return listView;
     }
 
-    public void SafeLoadWindows()
+    private Button CreateButton(string text, int left, int top, EventHandler onClick)
     {
-        if (InvokeRequired)
+        var button = new Button
         {
-            Invoke(new Action(LoadWindows));
-        }
-        else
-        {
-            LoadWindows();
-        }
+            Text = text,
+            Left = left,
+            Width = 100,
+            Top = top
+        };
+        button.Click += onClick;
+        return button;
     }
 
     private void LoadWindows()
     {
-        listView.Items.Clear();
-        screenshotCache.Clear();
-
-        EnumWindows((hWnd, lParam) =>
-        {
-            if (IsWindowVisible(hWnd))
-            {
-                var windowText = new StringBuilder(256);
-                GetWindowText(hWnd, windowText, windowText.Capacity);
-
-                if (windowText.ToString().Equals("MU", StringComparison.OrdinalIgnoreCase))
-                {
-                    var status = trayContext.IsMonitoring((int)hWnd) ? "Monitoring" : "Not Monitoring";
-                    var windowRect = helperMonitorService.GetWindowRectangle((int)hWnd);
-                    var screenshot = helperMonitorService.CaptureScreen(windowRect);
-
-                    var item = new ListViewItem(hWnd.ToString());
-                    item.SubItems.Add(windowText.ToString());
-                    item.SubItems.Add(status);
-
-                    if (screenshot != null)
-                        screenshotCache[hWnd.ToString()] = screenshot;
-
-                    listView.Items.Add(item);
-                }
-            }
-            return true;
-        }, IntPtr.Zero);
+        _listView.Items.Clear();
+        _listView.Items.AddRange(_windowMonitorManager.LoadWindows().ToArray());
     }
 
     private void ListView_MouseClick(object? sender, MouseEventArgs e)
     {
-        if (e.Button == MouseButtons.Right && listView.FocusedItem != null && listView.FocusedItem.Bounds.Contains(e.Location))
+        if (e.Button == MouseButtons.Right && _listView.FocusedItem != null && _listView.FocusedItem.Bounds.Contains(e.Location))
         {
-            contextMenuStrip.Items.Clear();
+            _contextMenuStrip.Items.Clear();
+            int handle = int.Parse(_listView.FocusedItem.Text);
 
-            int handle = int.Parse(listView.FocusedItem.Text);
-            bool isMonitoring = trayContext.IsMonitoring(handle);
+            _contextMenuStrip.Items.Add(IsMonitoring(handle)
+                ? CreateMenuItem("Stop Monitoring", () => StopMonitoring(handle))
+                : CreateMenuItem("Start Monitoring", () => StartMonitoring(handle)));
 
-            if (!isMonitoring)
-            {
-                var startItem = new ToolStripMenuItem("Start Monitoring");
-                startItem.Click += (s, ev) => StartMonitoring(handle);
-                contextMenuStrip.Items.Add(startItem);
-            }
-            else
-            {
-                var stopItem = new ToolStripMenuItem("Stop Monitoring");
-                stopItem.Click += (s, ev) => StopMonitoring(handle);
-                contextMenuStrip.Items.Add(stopItem);
-            }
+            if (_screenShotManager.ContainsScreenshot(handle.ToString()))
+                _contextMenuStrip.Items.Add(CreateMenuItem("View Screenshot", () => _screenShotManager.ShowScreenshot(handle.ToString())));
 
-            if (screenshotCache.ContainsKey(handle.ToString()))
-            {
-                var viewScreenshotItem = new ToolStripMenuItem("View Screenshot");
-                viewScreenshotItem.Click += (s, ev) => ShowScreenshot(screenshotCache[handle.ToString()]);
-                contextMenuStrip.Items.Add(viewScreenshotItem);
-            }
-
-            contextMenuStrip.Show(Cursor.Position);
+            _contextMenuStrip.Show(Cursor.Position);
         }
     }
 
-    private void ShowScreenshot(Bitmap screenshot)
+    private ToolStripMenuItem CreateMenuItem(string text, Action onClick)
     {
-        string basePath = AppDomain.CurrentDomain.BaseDirectory;
-        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
-
-        var screenshotForm = new Form
-        {
-            Text = "Screenshot Preview",
-            Width = screenshot.Width + 20,
-            Height = screenshot.Height + 40,
-            StartPosition = FormStartPosition.CenterScreen,
-            Icon = new Icon(resourcePath)
-        };
-
-        var pictureBox = new PictureBox
-        {
-            Image = screenshot,
-            Dock = DockStyle.Fill,
-            SizeMode = PictureBoxSizeMode.StretchImage,
-        };
-
-        screenshotForm.Controls.Add(pictureBox);
-        screenshotForm.ShowDialog();
+        var menuItem = new ToolStripMenuItem(text);
+        menuItem.Click += (s, e) => onClick();
+        return menuItem;
     }
 
-    private void StartMonitoring(int handle)
+    private void StartMonitoring(int windowHandle)
     {
-        trayContext.StartMonitoring(handle);
-        LoadWindows();
+        _windowMonitorManager.StartMonitoring(windowHandle);
+        _notificationManager.ShowBalloonTip("Monitoring started", $"Monitoring started for window {windowHandle}");
     }
 
-    private void StopMonitoring(int handle)
+    private void StopMonitoring(int windowHandle)
     {
-        trayContext.StopMonitoring(handle);
-        LoadWindows();
+        _windowMonitorManager.StopMonitoring(windowHandle);
+        _notificationManager.ShowBalloonTip("Monitoring stopped", $"Monitoring stopped for window {windowHandle}", ToolTipIcon.Warning);
+    }
+
+    private void SafeLoadWindows(object? sender, EventArgs e)
+    {
+        if (InvokeRequired)
+            Invoke(new Action(LoadWindows));
+        else
+            LoadWindows();
     }
 
     private void WindowListForm_Resize(object? sender, EventArgs e)
     {
-        if (WindowState == FormWindowState.Minimized)
-        {
-            Hide();
-        }
+        if (WindowState == FormWindowState.Minimized) Hide();
+    }
+
+    public void OnConfigure(object? sender, EventArgs e)
+    {
+        using var form = new ConfigurationTelegramForm();
+        form.ShowDialog();
+    }
+
+    public void OnExit(object? sender, EventArgs e)
+    {
+        _alarmManager.StopAlarm();
+        _windowMonitorManager.StopMonitoring();
+        TrayIconManager.Instance.Visible = false;
+        Application.ExitThread();
+        Application.Exit();
+    }
+
+    public void StopAlarm(object? sender, EventArgs e)
+    {
+        _alarmManager.StopAlarm();
+    }
+
+    public bool IsMonitoring(int windowHandle)
+    {
+        return _windowMonitorManager.IsMonitoring(windowHandle);
     }
 }

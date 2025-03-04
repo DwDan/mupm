@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Net.Http.Json;
+using MUProcessMonitor.Manager;
 using MUProcessMonitor.Models;
 
 namespace MUProcessMonitor.Services;
@@ -23,9 +24,9 @@ public class TelegramService : IDisposable
         httpClient = new HttpClient(handler);
     }
 
-    public TelegramService(NotifyIcon trayIcon)
+    public TelegramService()
     {
-        this.trayIcon = trayIcon;
+        this.trayIcon = TrayIconManager.Instance;
 
         Task.Run(() => MonitorMessageQueue(cancellationTokenSource.Token), cancellationTokenSource.Token);
     }
