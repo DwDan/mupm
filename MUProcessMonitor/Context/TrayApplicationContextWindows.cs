@@ -1,161 +1,101 @@
 ﻿using MUProcessMonitor.Forms;
-using MUProcessMonitor.Models;
+using MUProcessMonitor.Manager;
 using MUProcessMonitor.Services;
 
 namespace MUProcessMonitor.Context;
 
 public class TrayApplicationContextWindows : ApplicationContext
 {
-    private NotifyIcon trayIcon;
-    private MUWindowListForm windowListForm;
-    private ConfigurationTelegramForm configurationTelegramForm;
-    private Dictionary<int, bool> monitoredWindows = new();
-    private Thread monitorThread;
-    private TelegramService telegramService;
-    private HelperMonitorService helperMonitorService;
-    private AlarmService alarmService;
-    private ManualResetEvent stopMonitorEvent = new ManualResetEvent(false);
-    private bool isMonitoring = true;
-    private bool isAlarmPlaying = false;
+    public NotificationManager NotificationManager;
+    public AlarmManager AlarmManager;
+
+    private NotifyIcon _trayIcon;
+    private MUWindowListForm _windowListForm;
+    private ConfigurationTelegramForm _configurationTelegramForm;
+    private WindowMonitorService _windowMonitorService;
 
     public TrayApplicationContextWindows()
     {
+        InitializeTrayIcon();
+
+        NotificationManager = new NotificationManager(_trayIcon ?? throw new ArgumentNullException(nameof(_trayIcon)));
+        AlarmManager = new AlarmManager();
+
+
+        _configurationTelegramForm = new ConfigurationTelegramForm(_trayIcon);
+        _configurationTelegramForm.LoadConfiguration();
+
+        _windowMonitorService = new WindowMonitorService(this);
+
+        _windowListForm = new MUWindowListForm(this);
+        _windowListForm.Show();
+    }
+
+    private void InitializeTrayIcon()
+    {
         string basePath = AppDomain.CurrentDomain.BaseDirectory;
         string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
-        string alarmPath = Path.Combine(basePath, "Resources", "alarm.wav");
 
-        trayIcon = new NotifyIcon()
+        _trayIcon = new NotifyIcon
         {
             Icon = new Icon(resourcePath),
             Visible = true,
-            Text = "Window Monitor"
+            Text = "Window Monitor",
+            ContextMenuStrip = new ContextMenuStrip()
         };
 
-        trayIcon.ContextMenuStrip = new ContextMenuStrip();
-        trayIcon.ContextMenuStrip.Items.Add("Open", null, OnOpen);
-        trayIcon.ContextMenuStrip.Items.Add("Configure", null, OnConfigure);
-        trayIcon.ContextMenuStrip.Items.Add("Stop Alarm", null, StopAlarm);
-        trayIcon.ContextMenuStrip.Items.Add("Exit", null, OnExit);
+        _trayIcon.ContextMenuStrip.Items.Add("Open", null, OnOpen);
+        _trayIcon.ContextMenuStrip.Items.Add("Configure", null, OnConfigure);
+        _trayIcon.ContextMenuStrip.Items.Add("Stop Alarm", null, StopAlarm);
+        _trayIcon.ContextMenuStrip.Items.Add("Exit", null, OnExit);
 
-        trayIcon.DoubleClick += OnOpen;
-
-        windowListForm = new MUWindowListForm(this);
-        windowListForm.Show();
-
-        configurationTelegramForm = new ConfigurationTelegramForm(trayIcon);
-        configurationTelegramForm.LoadConfiguration();
-
-        monitorThread = new Thread(MonitorWindows) { IsBackground = true };
-        monitorThread.Start();
-
-        telegramService = new TelegramService(trayIcon);
-        helperMonitorService = new HelperMonitorService();
-        alarmService = new AlarmService();
+        _trayIcon.DoubleClick += OnOpen;
     }
 
-    public bool IsMonitoring(int windowHandle)
+    public void OnOpen(object? sender, EventArgs e)
     {
-        return monitoredWindows.ContainsKey(windowHandle);
-    }
+        if (_windowListForm.IsDisposed)
+        {
+            _windowListForm = new MUWindowListForm(this);
+        }
 
-    private void OnOpen(object? sender, EventArgs e)
-    {
-        if (windowListForm.IsDisposed)
-            windowListForm = new MUWindowListForm(this);
-
-        windowListForm.Show();
-        windowListForm.WindowState = FormWindowState.Normal;
-        windowListForm.BringToFront();
+        _windowListForm.Show();
+        _windowListForm.WindowState = FormWindowState.Normal;
+        _windowListForm.BringToFront();
     }
 
     public void OnConfigure(object? sender, EventArgs e)
     {
-        configurationTelegramForm.ShowDialog();
+        _configurationTelegramForm.ShowDialog();
     }
 
     public void OnExit(object? sender, EventArgs e)
     {
-        isMonitoring = false;
-        isAlarmPlaying = false;
-        stopMonitorEvent.Set();
-        monitorThread.Join();
-        trayIcon.Visible = false;
+        AlarmManager.StopAlarm();
+        _windowMonitorService.StopMonitoring();
+        _trayIcon.Visible = false;
         Application.ExitThread();
         Application.Exit();
     }
 
+    public void StopAlarm(object? sender, EventArgs e)
+        => AlarmManager.StopAlarm();
+
+    public bool IsMonitoring(int windowHandle)
+        => _windowMonitorService.IsMonitoring(windowHandle);
+
     public void StartMonitoring(int windowHandle)
     {
-        if (!monitoredWindows.ContainsKey(windowHandle))
-        {
-            monitoredWindows[windowHandle] = true;
-            trayIcon.ShowBalloonTip(3000, "Monitoring", $"Monitoring window {windowHandle}.", ToolTipIcon.Info);
-        }
+        _windowMonitorService.StartMonitoring(windowHandle);
+
+        NotificationManager.ShowBalloonTip("Monitoring started", $"Monitoring started for window with handle {windowHandle}", ToolTipIcon.Info);
     }
 
     public void StopMonitoring(int windowHandle)
     {
-        if (monitoredWindows.ContainsKey(windowHandle))
-        {
-            monitoredWindows.Remove(windowHandle);
-            trayIcon.ShowBalloonTip(3000, "Monitoring", $"Monitoring stopped for window {windowHandle}.", ToolTipIcon.Info);
-            windowListForm.SafeLoadWindows();
-        }
-    }
+        _windowMonitorService.StopMonitoring(windowHandle);
+        _windowListForm.SafeLoadWindows();
 
-    private void MonitorWindows()
-    {
-        while (isMonitoring)
-        {
-            if (stopMonitorEvent.WaitOne(Configuration.ThreadSleepTime))
-                break;
-
-            foreach (var windowHandle in monitoredWindows.Keys.ToList())
-            {
-                try
-                {
-                    var windowRect = helperMonitorService.GetWindowRectangle(windowHandle);
-                    if (helperMonitorService.IsHelperInactive(windowHandle, windowRect))
-                    {
-                        string message = $"Helper inactive on window {windowHandle}.";
-                        trayIcon.ShowBalloonTip(5000, "Helper Inactive", message, ToolTipIcon.Warning);
-                        telegramService.QueueNotification("Helper Inactive", message);
-                        StopMonitoring(windowHandle);
-
-                        if (Configuration.UseAlarm && !isAlarmPlaying)
-                            StartAlarm();
-                    }
-                }
-                catch
-                {
-                    StopMonitoring(windowHandle);
-                    string message = $"Window {windowHandle} has been closed.";
-                    trayIcon.ShowBalloonTip(5000, "Window Closed", message, ToolTipIcon.Warning);
-                    telegramService.QueueNotification("Window Closed", message);
-
-                    if (Configuration.UseAlarm && !isAlarmPlaying)
-                        StartAlarm();
-                }
-            }
-        }
-    }
-
-    private void StartAlarm()
-    {
-        isAlarmPlaying = true;
-        new Thread(() =>
-        {
-            while (isAlarmPlaying)
-            {
-                alarmService.Start().Wait();
-            }
-        })
-        { IsBackground = true }.Start();
-    }
-
-    public void StopAlarm(object? sender, EventArgs e)
-    {
-        isAlarmPlaying = false;
-        alarmService.Stop();
+        NotificationManager.ShowBalloonTip("Monitoring stopped", $"Monitoring stopped for window with handle {windowHandle}", ToolTipIcon.Warning);
     }
 }
