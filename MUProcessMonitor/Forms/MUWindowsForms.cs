@@ -1,4 +1,5 @@
-﻿using MUProcessMonitor.Manager;
+﻿using MUProcessMonitor.Helpers;
+using MUProcessMonitor.Manager;
 
 namespace MUProcessMonitor.Forms;
 
@@ -23,10 +24,7 @@ public class MUWindowListForm : Form
         _windowMonitorManager = WindowMonitorManager.Instance;
         _windowMonitorManager.MonitoringUpdated += SafeLoadWindows;
 
-        string basePath = AppDomain.CurrentDomain.BaseDirectory;
-        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
-        Icon = new Icon(resourcePath);
-
+        Icon = BitmapHelper.LoadIcon("icon_mupm.ico");
         Text = "MU Window Monitor";
         Width = 500;
         Height = 400;

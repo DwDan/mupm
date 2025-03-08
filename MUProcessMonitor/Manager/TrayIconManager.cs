@@ -1,15 +1,14 @@
-﻿namespace MUProcessMonitor.Manager
+﻿using MUProcessMonitor.Helpers;
+
+namespace MUProcessMonitor.Manager
 {
     public class TrayIconManager
     {
         private static readonly Lazy<NotifyIcon> _instance = new(() =>
         {
-            string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
-
             var trayIcon = new NotifyIcon
             {
-                Icon = new Icon(resourcePath),
+                Icon = BitmapHelper.LoadIcon("icon_mupm.ico"),
                 Visible = true,
                 Text = "Window Monitor",
                 ContextMenuStrip = new ContextMenuStrip()

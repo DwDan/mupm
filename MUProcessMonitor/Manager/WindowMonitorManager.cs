@@ -6,6 +6,9 @@ namespace MUProcessMonitor.Manager;
 
 public class WindowMonitorManager
 {
+    private static readonly Lazy<WindowMonitorManager> _instance = new(() => new WindowMonitorManager());
+    public static WindowMonitorManager Instance => _instance.Value;
+
     private WindowMonitorService _windowMonitorService;
     private HelperMonitorService _helperMonitorService;
     private NotificationManager _notificationManager;
@@ -17,19 +20,16 @@ public class WindowMonitorManager
     private bool isMonitoring = true;
     public event EventHandler? MonitoringUpdated;
 
-    private static readonly Lazy<WindowMonitorManager> _instance = new(() => new WindowMonitorManager());
-    public static WindowMonitorManager Instance => _instance.Value;
-
     public WindowMonitorManager()
     {
-        monitorThread = new Thread(MonitorWindows) { IsBackground = true };
-        monitorThread.Start();
-
         _windowMonitorService = new WindowMonitorService();
         _helperMonitorService = new HelperMonitorService();
         _notificationManager = NotificationManager.Instance;
         _alarmManager = AlarmManager.Instance;
         _screenShotManager = ScreenShotManager.Instance;
+
+        monitorThread = new Thread(MonitorWindows) { IsBackground = true };
+        monitorThread.Start();
     }
 
     public void StartMonitoring(int windowHandle)

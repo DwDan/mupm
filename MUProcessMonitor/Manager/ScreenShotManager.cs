@@ -1,4 +1,5 @@
-﻿using MUProcessMonitor.Services;
+﻿using MUProcessMonitor.Helpers;
+using MUProcessMonitor.Services;
 
 namespace MUProcessMonitor.Manager
 {
@@ -33,16 +34,13 @@ namespace MUProcessMonitor.Manager
         {
             if (!_screenShotService.ScreenshotCache.TryGetValue(handle, out var screenshot)) return;
 
-            string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
-
             var screenshotForm = new Form
             {
                 Text = "Screenshot Preview",
                 Width = screenshot.Width + 20,
                 Height = screenshot.Height + 40,
                 StartPosition = FormStartPosition.CenterScreen,
-                Icon = new Icon(resourcePath)
+                Icon = BitmapHelper.LoadIcon("icon_mupm.ico")
             };
 
             var pictureBox = new PictureBox

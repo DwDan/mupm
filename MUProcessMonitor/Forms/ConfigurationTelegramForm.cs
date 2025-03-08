@@ -1,4 +1,5 @@
-﻿using MUProcessMonitor.Manager;
+﻿using MUProcessMonitor.Helpers;
+using MUProcessMonitor.Manager;
 using MUProcessMonitor.Models;
 
 namespace MUProcessMonitor.Forms;
@@ -22,10 +23,7 @@ public class ConfigurationTelegramForm : Form
         AlarmManager = AlarmManager.Instance;
         ConfigurationManager = ConfigurationManager.Instance;
 
-        string basePath = AppDomain.CurrentDomain.BaseDirectory;
-        string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");
-        Icon = new Icon(resourcePath);
-
+        Icon = BitmapHelper.LoadIcon("icon_mupm.ico");
         Text = "Configuration";
         Width = 400;
         Height = 320;

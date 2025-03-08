@@ -1,6 +1,6 @@
-﻿using System.Drawing;
-using System.Drawing.Imaging;
+﻿using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using MUProcessMonitor.Helpers;
 using MUProcessMonitor.Models;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
@@ -10,8 +10,6 @@ namespace MUProcessMonitor.Services
     public class HelperMonitorService
     {
         private static readonly double Threshold = 1;
-        private static readonly string BasePath = AppDomain.CurrentDomain.BaseDirectory;
-        private static readonly string ResourcesPath = Path.Combine(BasePath, "Resources");
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -30,17 +28,8 @@ namespace MUProcessMonitor.Services
             if (AreScreenshotInvalid(screenshot))
                 throw new InvalidOperationException();
 
-            return IsIconVisible(screenshot, LoadIcon("play_icon.png"), true) ||
-                   IsIconVisible(screenshot, LoadIcon("helper_off.png"), false);
-        }
-
-        private Bitmap? LoadIcon(string iconName)
-        {
-            string resourcePath = Path.Combine(ResourcesPath, iconName);
-            if (File.Exists(resourcePath))
-                return new Bitmap(resourcePath);
-
-            return null;
+            return IsIconVisible(screenshot, BitmapHelper.LoadBitmap("play_icon.png"), true) ||
+                   IsIconVisible(screenshot, BitmapHelper.LoadBitmap("helper_off.png"), false);
         }
 
         public Bitmap CaptureScreen(Rectangle region)
