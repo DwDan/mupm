@@ -15,13 +15,13 @@ public class MUWindowListForm : Form
 
     public MUWindowListForm()
     {
-        _alarmManager = AlarmManager.Instance;
         _configurationManager = ConfigurationManager.Instance;
+        _configurationManager.LoadConfiguration();
+        _alarmManager = AlarmManager.Instance;
         _screenShotManager = ScreenShotManager.Instance;
         _notificationManager = NotificationManager.Instance;
         _windowMonitorManager = WindowMonitorManager.Instance;
         _windowMonitorManager.MonitoringUpdated += SafeLoadWindows;
-        _configurationManager.LoadConfiguration();
 
         string basePath = AppDomain.CurrentDomain.BaseDirectory;
         string resourcePath = Path.Combine(basePath, "Resources", "icon_mupm.ico");

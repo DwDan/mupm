@@ -1,4 +1,5 @@
-﻿using System.Drawing.Imaging;
+﻿using System.Drawing;
+using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using MUProcessMonitor.Models;
 using OpenCvSharp;
@@ -25,8 +26,12 @@ namespace MUProcessMonitor.Services
         public bool IsHelperInactive(int windowHandle, Rectangle windowRect)
         {
             var screenshot = CaptureScreen(windowRect);
-            return IsIconVisible(screenshot, LoadIcon("play_icon.png"), Threshold, true) ||
-                   IsIconVisible(screenshot, LoadIcon("helper_off.png"), Threshold, false);
+
+            if (AreScreenshotInvalid(screenshot))
+                throw new InvalidOperationException();
+
+            return IsIconVisible(screenshot, LoadIcon("play_icon.png"), true) ||
+                   IsIconVisible(screenshot, LoadIcon("helper_off.png"), false);
         }
 
         private Bitmap? LoadIcon(string iconName)
@@ -45,50 +50,73 @@ namespace MUProcessMonitor.Services
 
             Bitmap bitmap = new Bitmap(region.Width, region.Height, PixelFormat.Format32bppArgb);
             using (Graphics g = Graphics.FromImage(bitmap))
-            {
                 g.CopyFromScreen(region.Left, region.Top, 0, 0, region.Size, CopyPixelOperation.SourceCopy);
-            }
+
             return bitmap;
         }
 
-        private bool IsIconVisible(Bitmap screenshot, Bitmap? icon, double threshold, bool isTopRegion)
+        private bool IsIconVisible(Bitmap screenshot, Bitmap? icon, bool isTopRegion)
         {
-            if (icon is null || screenshot == null || screenshot.Width == 0 || screenshot.Height == 0)
+            try
+            {
+                if (!AreImagesValid(screenshot, icon))
+                    return false;
+
+                using Mat source = BitmapConverter.ToMat(screenshot);
+                using Mat template = BitmapConverter.ToMat(icon);
+
+                if (source.Empty() || template.Empty())
+                    return false;
+
+                var roi = GetRegionOfInterest(source, isTopRegion);
+                using Mat croppedSource = new Mat(source, roi);
+
+                if (croppedSource.Empty())
+                    return false;
+
+                return IsTemplateMatchingThresholdMet(croppedSource, template);
+            }
+            catch
+            {
                 return false;
+            }
+        }
 
-            using Mat source = BitmapConverter.ToMat(screenshot);
-            using Mat template = BitmapConverter.ToMat(icon);
+        private bool AreImagesValid(Bitmap screenshot, Bitmap? icon)
+        {
+            return icon != null &&
+                screenshot != null &&
+                screenshot.Width > 1 &&
+                screenshot.Height > 1;
+        }
 
-            if (source.Empty() || template.Empty())
-                return false;
+        private bool AreScreenshotInvalid(Bitmap screenshot)
+        {
+            return screenshot == null ||
+                screenshot.Width <= 1 ||
+                screenshot.Height <= 1;
+        }
 
-            using Mat result = new Mat();
-
+        private Rect GetRegionOfInterest(Mat source, bool isTopRegion)
+        {
             int width = source.Width;
             int height = source.Height;
 
-            if (width == 0 || height == 0)
-                return false;
-
             int roiWidth = width / 2;
-            int roiHeight = isTopRegion ? height / 6 : height / 7;
-
-            if (roiWidth <= 0 || roiHeight <= 0)
-                return false;
+            int roiHeight = height / 7;
 
             int roiX = 0;
             int roiY = isTopRegion ? 0 : height - roiHeight;
 
-            Rect roi = new Rect(roiX, roiY, roiWidth, roiHeight);
-            using Mat croppedSource = new Mat(source, roi);
+            return new Rect(roiX, roiY, roiWidth, roiHeight);
+        }
 
-            if (croppedSource.Empty())
-                return false;
-
-            Cv2.MatchTemplate(croppedSource, template, result, TemplateMatchModes.CCoeffNormed);
+        private bool IsTemplateMatchingThresholdMet(Mat source, Mat template)
+        {
+            using Mat result = new Mat();
+            Cv2.MatchTemplate(source, template, result, TemplateMatchModes.CCoeffNormed);
             Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out _);
-
-            return maxVal >= threshold;
+            return maxVal >= Threshold;
         }
     }
 }

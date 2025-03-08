@@ -1,5 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using System.Text;
+﻿using System.Text;
 using MUProcessMonitor.Models;
 using MUProcessMonitor.Services;
 
@@ -7,17 +6,6 @@ namespace MUProcessMonitor.Manager;
 
 public class WindowMonitorManager
 {
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
-
-    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
-
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
-
-    [DllImport("user32.dll", SetLastError = true)]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
-
     private WindowMonitorService _windowMonitorService;
     private HelperMonitorService _helperMonitorService;
     private NotificationManager _notificationManager;
@@ -76,12 +64,12 @@ public class WindowMonitorManager
 
         _screenShotManager.Clear();
 
-        EnumWindows((hWnd, lParam) =>
+        WindowMonitorService.EnumWindows((hWnd, lParam) =>
         {
-            if (IsWindowVisible(hWnd))
+            if (WindowMonitorService.IsWindowVisible(hWnd))
             {
                 var windowText = new StringBuilder(256);
-                GetWindowText(hWnd, windowText, windowText.Capacity);
+                WindowMonitorService.GetWindowText(hWnd, windowText, windowText.Capacity);
 
                 if (windowText.ToString().Equals("MU", StringComparison.OrdinalIgnoreCase))
                 {
