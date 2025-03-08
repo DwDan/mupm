@@ -10,6 +10,7 @@ namespace MUProcessMonitor.Manager
         public static FindBombManager Instance => _instance.Value;
 
         public Bitmap EmptyCell = BitmapHelper.LoadBitmap("FindBomb", "empty_cell.png")!;
+        public Bitmap UnknowCell = BitmapHelper.LoadBitmap("FindBomb", "unknow_cell.png")!;
 
         public Dictionary<int, Bitmap> NumberIcons = new Dictionary<int, Bitmap>
         {
@@ -26,13 +27,14 @@ namespace MUProcessMonitor.Manager
         private HelperMonitorService _helperMonitorService;
         private readonly NotifyIcon _trayIcon;
 
-        private const int GridSize = 8;
-        private const int CellSize = 50;
+        private const int GridSize = 9;
+        private const int CellSize = 24;
 
         private readonly CellState[,] _cellStates = new CellState[GridSize, GridSize];
         private readonly int[,] _cellNumbers = new int[GridSize, GridSize];
         private readonly Dictionary<(int, int), float> _riskMap = new();
         private Rectangle _gameRegion;
+        private int _windowHandle;
 
         public FindBombManager()
         {
@@ -40,15 +42,18 @@ namespace MUProcessMonitor.Manager
             _trayIcon = TrayIconManager.Instance;
         }
 
-        public Bitmap? CaptureScreen(int hWnd)
+        public Bitmap? CaptureScreen()
         {
-            var windowRect = _helperMonitorService.GetWindowRectangle(hWnd);
+            var windowRect = _helperMonitorService.GetWindowRectangle(_windowHandle);
+
             return _helperMonitorService.CaptureScreen(windowRect);
         }
 
         public Bitmap? LoadGameCapture(int hWnd)
         {
-            var screenshot = CaptureScreen(hWnd);
+            _windowHandle = hWnd;
+
+            var screenshot = CaptureScreen();
 
             if (screenshot != null)
             {
@@ -85,14 +90,16 @@ namespace MUProcessMonitor.Manager
             if (_gameRegion == Rectangle.Empty)
                 return null;
 
-            var screenshot = _helperMonitorService.CaptureScreen(_gameRegion);
+            var screenshot = CaptureScreen();
             if (screenshot == null)
             {
                 _trayIcon.ShowBalloonTip(5000, "Error", "Unable to capture the game area", ToolTipIcon.Error);
                 return BitmapHelper.LoadBitmap("FindBomb", "gameRegion.png");
             }
 
-            var nextStepImage = new Bitmap(screenshot);
+            var screenshotRegion = _helperMonitorService.CaptureRegion(screenshot, _gameRegion);
+
+            var nextStepImage = new Bitmap(screenshotRegion);
             using (Graphics g = Graphics.FromImage(nextStepImage))
             {
                 var emptyPen = new Pen(Color.Gray, 2);
@@ -116,21 +123,21 @@ namespace MUProcessMonitor.Manager
                             g.DrawRectangle(numberPen, cellRect);
                             g.DrawString(number.ToString(), new Font("Arial", 10), Brushes.Blue, cellRect.Location);
                         }
+                        else if (IsUnknowCell(cellBitmap))
+                        {
+                            _cellStates[row, col] = CellState.Unknown;
+                        }                        
                         else if (IsEmptyCell(cellBitmap))
                         {
                             _cellStates[row, col] = CellState.Empty;
                             g.DrawRectangle(emptyPen, cellRect);
                         }
-                        else
-                        {
-                            _cellStates[row, col] = CellState.Unknown;
-                        }
                     }
                 }
 
-                CalculateRiskMap();
-
                 MarkPossibleBombs(g, possibleBombPen);
+
+                CalculateRiskMap();
 
                 (int nextRow, int nextCol) = GetLowestRiskMove();
                 if (nextRow >= 0 && nextCol >= 0)
@@ -161,11 +168,13 @@ namespace MUProcessMonitor.Manager
             {
                 int bombs = _cellNumbers[nRow, nCol];
                 int possibleBombs = GetAdjacentCells(nRow, nCol, CellState.PossibleBomb).Count;
-                int unknowns = GetAdjacentCells(nRow, nCol, CellState.Unknown).Count;
+                var unknowns = GetAdjacentCells(nRow, nCol, CellState.Unknown);
 
-                if (unknowns > 0)
+                if (unknowns.Count > 0)
                 {
-                    float risk = (bombs - possibleBombs) / (float)unknowns;
+                    int bombsNeeded = bombs - possibleBombs;
+                    float risk = bombsNeeded / (float)unknowns.Count;
+
                     totalRisk += risk;
                     consideredNumbers++;
                 }
@@ -176,7 +185,10 @@ namespace MUProcessMonitor.Manager
 
         private (int, int) GetLowestRiskMove()
         {
-            return _riskMap.OrderBy(kvp => kvp.Value).FirstOrDefault().Key;
+            return _riskMap
+                .Where(kvp => _cellStates[kvp.Key.Item1, kvp.Key.Item2] != CellState.PossibleBomb)
+                .OrderBy(kvp => kvp.Value)
+                .FirstOrDefault().Key;
         }
 
         private IEnumerable<(int, int)> GetAllUnknownCells()
@@ -222,8 +234,9 @@ namespace MUProcessMonitor.Manager
                     {
                         var unknownCells = GetAdjacentCells(row, col, CellState.Unknown);
                         var bombCount = _cellNumbers[row, col];
+                        var possibleBombs = GetAdjacentCells(row, col, CellState.PossibleBomb).Count;
 
-                        if (unknownCells.Count == bombCount)
+                        if (unknownCells.Count > 0 && bombCount - possibleBombs == unknownCells.Count)
                         {
                             foreach (var (bombRow, bombCol) in unknownCells)
                             {
@@ -240,6 +253,11 @@ namespace MUProcessMonitor.Manager
         private bool IsEmptyCell(Bitmap cellBitmap)
         {
             return _helperMonitorService.IsTemplateVisible(cellBitmap, EmptyCell);
+        }
+
+        private bool IsUnknowCell(Bitmap cellBitmap)
+        {
+            return _helperMonitorService.IsTemplateVisible(cellBitmap, UnknowCell);
         }
 
         private bool IsNumberCell(Bitmap cellBitmap, out int number)

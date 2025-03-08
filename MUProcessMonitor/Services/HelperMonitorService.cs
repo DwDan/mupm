@@ -9,7 +9,7 @@ namespace MUProcessMonitor.Services
 {
     public class HelperMonitorService
     {
-        private static readonly double Threshold = 1;
+        private static readonly double Threshold = 0.95;
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
@@ -42,6 +42,16 @@ namespace MUProcessMonitor.Services
                 g.CopyFromScreen(region.Left, region.Top, 0, 0, region.Size, CopyPixelOperation.SourceCopy);
 
             return bitmap;
+        }
+
+        public Bitmap CaptureRegion(Bitmap screenshot, Rectangle region)
+        {
+            if (region.Width <= 0 || region.Height <= 0)
+                return new Bitmap(1, 1);
+
+            Rectangle validRegion = Rectangle.Intersect(new Rectangle(System.Drawing.Point.Empty, screenshot.Size), region);
+
+            return screenshot.Clone(validRegion, screenshot.PixelFormat);
         }
 
         private bool IsIconVisible(Bitmap screenshot, Bitmap? icon, bool isTopRegion)
@@ -150,7 +160,7 @@ namespace MUProcessMonitor.Services
             Cv2.MatchTemplate(source, template, result, TemplateMatchModes.CCoeffNormed);
             Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out OpenCvSharp.Point maxLoc);
 
-            if (maxVal >= 0.8)
+            if (maxVal >= Threshold)
                 return new Rectangle(maxLoc.X, maxLoc.Y, region.Width, region.Height);
 
             return Rectangle.Empty;
