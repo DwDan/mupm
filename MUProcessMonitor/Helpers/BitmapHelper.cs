@@ -5,9 +5,9 @@
         private static readonly string BasePath = AppDomain.CurrentDomain.BaseDirectory;
         private static readonly string ResourcesPath = Path.Combine(BasePath, "Resources");
 
-        public static Bitmap? LoadBitmap(string bitmapName)
+        public static Bitmap? LoadBitmap(string folder, string bitmapName)
         {
-            string resourcePath = Path.Combine(ResourcesPath, bitmapName);
+            string resourcePath = Path.Combine(ResourcesPath, folder, bitmapName);
             if (File.Exists(resourcePath))
                 return new Bitmap(resourcePath);
             return null;

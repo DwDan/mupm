@@ -43,43 +43,43 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\alert_1.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_1.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\alert_10.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_10.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\alert_2.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_2.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\alert_3.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_3.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\alert_4.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_4.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\alert_5.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_5.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\alert_6.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_6.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\alert_7.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_7.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\alert_8.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_8.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\alert_9.mp3">
+    <EmbeddedResource Include="Resources\Alert\alert_9.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\helper_off.png">
+    <EmbeddedResource Include="Resources\Helper\helper_off.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\helper_on.png">
+    <EmbeddedResource Include="Resources\Helper\helper_on.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
-    <EmbeddedResource Include="Resources\play_icon.png">
+    <EmbeddedResource Include="Resources\Helper\play_icon.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
   </ItemGroup>
@@ -100,6 +100,10 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\FindBomb\" />
   </ItemGroup>
 
 </Project>

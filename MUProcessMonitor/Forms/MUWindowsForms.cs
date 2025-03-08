@@ -95,8 +95,8 @@ public class MUWindowListForm : Form
                 ? CreateMenuItem("Stop Monitoring", () => StopMonitoring(handle))
                 : CreateMenuItem("Start Monitoring", () => StartMonitoring(handle)));
 
-            if (_screenShotManager.ContainsScreenshot(handle.ToString()))
-                _contextMenuStrip.Items.Add(CreateMenuItem("View Screenshot", () => _screenShotManager.ShowScreenshot(handle.ToString())));
+            if (_screenShotManager.ContainsScreenshot(handle))
+                _contextMenuStrip.Items.Add(CreateMenuItem("View Screenshot", () => _screenShotManager.ShowScreenshot(handle)));
 
             _contextMenuStrip.Show(Cursor.Position);
         }

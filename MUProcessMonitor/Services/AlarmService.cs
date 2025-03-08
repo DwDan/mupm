@@ -12,7 +12,7 @@ public class AlarmService
         lock (lockObj)
         {
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            string resourcePath = Path.Combine(basePath, "Resources", alarmSound ?? Configuration.AlarmSound);
+            string resourcePath = Path.Combine(basePath, "Resources", "Alert", alarmSound ?? Configuration.AlarmSound);
 
             Stop();
             waveOut = new WaveOutEvent();

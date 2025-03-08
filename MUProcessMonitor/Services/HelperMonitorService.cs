@@ -28,8 +28,8 @@ namespace MUProcessMonitor.Services
             if (AreScreenshotInvalid(screenshot))
                 throw new InvalidOperationException();
 
-            return IsIconVisible(screenshot, BitmapHelper.LoadBitmap("play_icon.png"), true) ||
-                   IsIconVisible(screenshot, BitmapHelper.LoadBitmap("helper_off.png"), false);
+            return IsIconVisible(screenshot, BitmapHelper.LoadBitmap("Helper", "play_icon.png"), true) ||
+                   IsIconVisible(screenshot, BitmapHelper.LoadBitmap("Helper", "helper_off.png"), false);
         }
 
         public Bitmap CaptureScreen(Rectangle region)
