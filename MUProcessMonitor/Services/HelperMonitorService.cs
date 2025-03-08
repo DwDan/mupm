@@ -71,12 +71,33 @@ namespace MUProcessMonitor.Services
             }
         }
 
-        private bool AreImagesValid(Bitmap screenshot, Bitmap? icon)
+        public bool IsTemplateVisible(Bitmap sourceImage, Bitmap templateImage)
         {
-            return icon != null &&
-                screenshot != null &&
-                screenshot.Width > 1 &&
-                screenshot.Height > 1;
+            try
+            {
+                if (!AreImagesValid(sourceImage, templateImage))
+                    return false;
+
+                using Mat source = BitmapConverter.ToMat(sourceImage);
+                using Mat template = BitmapConverter.ToMat(templateImage);
+
+                if (source.Empty() || template.Empty())
+                    return false;
+
+                return IsTemplateMatchingThresholdMet(source, template);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool AreImagesValid(Bitmap source, Bitmap? template)
+        {
+            return template != null &&
+                source != null &&
+                source.Width > 1 &&
+                source.Height > 1;
         }
 
         private bool AreScreenshotInvalid(Bitmap screenshot)
@@ -100,12 +121,39 @@ namespace MUProcessMonitor.Services
             return new Rect(roiX, roiY, roiWidth, roiHeight);
         }
 
+        public Mat GetRegionOfInterest(Bitmap screenshot, int roiX = 0, int roiY = 0, int roiWidth = 0, int roiHeight = 0)
+        {
+            using Mat source = BitmapConverter.ToMat(screenshot);
+
+            int width = source.Width;
+            int height = source.Height;
+
+            var roi = new Rect(roiX, roiY, roiWidth, roiHeight);
+
+            return new Mat(source, roi);
+        }
+
         private bool IsTemplateMatchingThresholdMet(Mat source, Mat template)
         {
             using Mat result = new Mat();
             Cv2.MatchTemplate(source, template, result, TemplateMatchModes.CCoeffNormed);
             Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out _);
             return maxVal >= Threshold;
+        }
+
+        public Rectangle FindSourceRegion(Bitmap screenshot, Bitmap region)
+        {
+            using Mat source = BitmapConverter.ToMat(screenshot);
+            using Mat template = BitmapConverter.ToMat(region);
+            using Mat result = new Mat();
+
+            Cv2.MatchTemplate(source, template, result, TemplateMatchModes.CCoeffNormed);
+            Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out OpenCvSharp.Point maxLoc);
+
+            if (maxVal >= 0.8)
+                return new Rectangle(maxLoc.X, maxLoc.Y, region.Width, region.Height);
+
+            return Rectangle.Empty;
         }
     }
 }

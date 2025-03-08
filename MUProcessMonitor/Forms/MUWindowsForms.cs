@@ -98,6 +98,12 @@ public class MUWindowListForm : Form
             if (_screenShotManager.ContainsScreenshot(handle))
                 _contextMenuStrip.Items.Add(CreateMenuItem("View Screenshot", () => _screenShotManager.ShowScreenshot(handle)));
 
+            _contextMenuStrip.Items.Add(CreateMenuItem("Find Bombs", () =>
+            {
+                using var form = new FindBombForm(handle);
+                form.ShowDialog();
+            }));
+
             _contextMenuStrip.Show(Cursor.Position);
         }
     }
