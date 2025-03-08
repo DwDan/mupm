@@ -2,11 +2,11 @@
 {
     public class ScreenShotService
     {
-        public Dictionary<string, Bitmap> ScreenshotCache;
+        public Dictionary<int, Bitmap> ScreenshotCache;
 
         public ScreenShotService()
         {
-            ScreenshotCache = new Dictionary<string, Bitmap>();
+            ScreenshotCache = new Dictionary<int, Bitmap>();
         }
 
         public void Clear()

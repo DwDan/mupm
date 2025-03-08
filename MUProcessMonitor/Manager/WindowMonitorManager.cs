@@ -82,7 +82,7 @@ public class WindowMonitorManager
                     item.SubItems.Add(status);
 
                     if (screenshot != null)
-                        _screenShotManager.AddScreenshot(hWnd.ToString(), screenshot);
+                        _screenShotManager.AddScreenshot((int)hWnd, screenshot);
 
                     listView.Add(item);
                 }
@@ -90,7 +90,7 @@ public class WindowMonitorManager
             return true;
         }, IntPtr.Zero);
 
-        return listView;
+        return listView.OrderBy(item => int.Parse(item.Text)).ToList();
     }
 
     private void MonitorWindows()

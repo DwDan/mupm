@@ -20,17 +20,17 @@ namespace MUProcessMonitor.Manager
             _screenShotService.Clear();
         }
 
-        public bool ContainsScreenshot(string handle)
+        public bool ContainsScreenshot(int handle)
         {
             return _screenShotService.ScreenshotCache.ContainsKey(handle);
         }
 
-        public void AddScreenshot(string handle, Bitmap screenshot)
+        public void AddScreenshot(int handle, Bitmap screenshot)
         {
             _screenShotService.ScreenshotCache[handle] = screenshot;
         }
 
-        public void ShowScreenshot(string handle)
+        public void ShowScreenshot(int handle)
         {
             if (!_screenShotService.ScreenshotCache.TryGetValue(handle, out var screenshot)) return;
 
