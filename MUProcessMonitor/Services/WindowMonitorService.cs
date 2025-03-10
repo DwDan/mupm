@@ -16,8 +16,9 @@ public class WindowMonitorService
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool IsWindowVisible(IntPtr hWnd);
 
-
     private Dictionary<int, bool> monitoredWindows = new();
+
+    private Dictionary<int, bool> marketedWindows = new();
 
     public List<int> GetMonitoredWindowHandles()
     {
@@ -39,5 +40,27 @@ public class WindowMonitorService
     {
         if (IsMonitoring(windowHandle))
             monitoredWindows.Remove(windowHandle);
+    }    
+    
+    public List<int> GetMarketedWindowHandles()
+    {
+        return marketedWindows.Keys.ToList();
+    }
+
+    public bool IsMarketing(int windowHandle)
+    {
+        return marketedWindows.ContainsKey(windowHandle);
+    }
+
+    public void StartMarketing(int windowHandle)
+    {
+        if (!IsMarketing(windowHandle))
+            marketedWindows[windowHandle] = true;
+    }
+
+    public void StopMarketing(int windowHandle)
+    {
+        if (IsMarketing(windowHandle))
+            marketedWindows.Remove(windowHandle);
     }
 }

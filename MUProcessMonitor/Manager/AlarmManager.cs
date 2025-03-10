@@ -15,6 +15,7 @@ public class AlarmManager
         if (!Configuration.UseAlarm || isAlarmPlaying) return;
 
         isAlarmPlaying = true;
+
         new Thread(() =>
         {
             while (isAlarmPlaying)
@@ -31,12 +32,16 @@ public class AlarmManager
         _alarmService.Stop();
     }
 
-    public async Task PlaySelectedSound(string selectedSound = "None")
+    public void PlaySelectedSound(string selectedSound = "None")
     {
-        if (selectedSound != "None")
-            await _alarmService.Start(selectedSound);
-        else
-            _alarmService.Stop();
+        new Thread(() =>
+        {
+            if (selectedSound != "None")
+                _alarmService.Start(selectedSound).Wait();
+            else
+                _alarmService.Stop();
+        })
+        { IsBackground = true }.Start();
     }
 }
 

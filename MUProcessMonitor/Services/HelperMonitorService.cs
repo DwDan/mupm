@@ -32,6 +32,16 @@ namespace MUProcessMonitor.Services
                    IsIconVisible(screenshot, BitmapHelper.LoadBitmap("Helper", "helper_off.png"), false);
         }
 
+        public bool IsMessageReceived(int windowHandle, Rectangle windowRect)
+        {
+            var screenshot = CaptureScreen(windowRect);
+
+            if (AreScreenshotInvalid(screenshot))
+                throw new InvalidOperationException();
+
+            return IsTemplateVisible(screenshot, BitmapHelper.LoadBitmap("Market", "email_icon.png")!);
+        }
+
         public Bitmap CaptureScreen(Rectangle region)
         {
             if (region.Width <= 0 || region.Height <= 0)

@@ -16,8 +16,10 @@ public class WindowMonitorManager
     private ScreenShotManager _screenShotManager;
 
     private Thread monitorThread;
+    private Thread marketingThread;
     private ManualResetEvent stopMonitorEvent = new(false);
     private bool isMonitoring = true;
+    private bool isMarketing = true;
     public event EventHandler? MonitoringUpdated;
 
     public WindowMonitorManager()
@@ -30,6 +32,9 @@ public class WindowMonitorManager
 
         monitorThread = new Thread(MonitorWindows) { IsBackground = true };
         monitorThread.Start();
+
+        marketingThread = new Thread(MonitorMarketing) { IsBackground = true };
+        marketingThread.Start();
     }
 
     public void StartMonitoring(int windowHandle)
@@ -44,11 +49,26 @@ public class WindowMonitorManager
         _windowMonitorService.StopMonitoring(windowHandle);
 
         OnMonitoringUpdated();
-    }    
-    
+    }
+
+    public void StartMarketing(int windowHandle)
+    {
+        _windowMonitorService.StartMarketing(windowHandle);
+
+        OnMonitoringUpdated();
+    }
+
+    public void StopMarketing(int windowHandle)
+    {
+        _windowMonitorService.StopMarketing(windowHandle);
+
+        OnMonitoringUpdated();
+    }
+
     public void StopMonitoring()
     {
         isMonitoring = false;
+        isMarketing = false;
         stopMonitorEvent.Set();
         monitorThread.Join();
     }
@@ -56,6 +76,11 @@ public class WindowMonitorManager
     public bool IsMonitoring(int windowHandle)
     {
         return _windowMonitorService.IsMonitoring(windowHandle);
+    }
+
+    public bool IsMarketing(int windowHandle)
+    {
+        return _windowMonitorService.IsMarketing(windowHandle);
     }
 
     public List<ListViewItem> LoadWindows()
@@ -73,7 +98,10 @@ public class WindowMonitorManager
 
                 if (windowText.ToString().Equals("MU", StringComparison.OrdinalIgnoreCase))
                 {
-                    var status = IsMonitoring((int)hWnd) ? "Monitoring" : "Not Monitoring";
+                    var status = IsMarketing((int)hWnd) ? "Marketing" :
+                        IsMonitoring((int)hWnd) ? "Monitoring" :
+                        "Not Monitoring";
+
                     var windowRect = _helperMonitorService.GetWindowRectangle((int)hWnd);
                     var screenshot = _helperMonitorService.CaptureScreen(windowRect);
 
@@ -118,6 +146,39 @@ public class WindowMonitorManager
                 {
                     string message = $"Window {windowHandle} has been closed.";
                     _windowMonitorService.StopMonitoring(windowHandle);
+                    _notificationManager.SendNotification("Window Closed", message, ToolTipIcon.Warning);
+                    _alarmManager.StartAlarm();
+                    OnMonitoringUpdated();
+                }
+            }
+        }
+    }    
+    
+    private void MonitorMarketing()
+    {
+        while (isMarketing)
+        {
+            if (stopMonitorEvent.WaitOne(Configuration.ThreadSleepTime))
+                break;
+
+            foreach (var windowHandle in _windowMonitorService.GetMarketedWindowHandles())
+            {
+                try
+                {
+                    var windowRect = _helperMonitorService.GetWindowRectangle(windowHandle);
+                    if (_helperMonitorService.IsMessageReceived(windowHandle, windowRect))
+                    {
+                        string message = $"Message received on window {windowHandle}.";
+                        _windowMonitorService.StopMarketing(windowHandle);
+                        _notificationManager.SendNotification("Message received", message, ToolTipIcon.Info);
+                        _alarmManager.PlaySelectedSound("alert_10.mp3");
+                        OnMonitoringUpdated();
+                    }
+                }
+                catch
+                {
+                    string message = $"Window {windowHandle} has been closed.";
+                    _windowMonitorService.StopMarketing(windowHandle);
                     _notificationManager.SendNotification("Window Closed", message, ToolTipIcon.Warning);
                     _alarmManager.StartAlarm();
                     OnMonitoringUpdated();

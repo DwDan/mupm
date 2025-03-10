@@ -91,18 +91,28 @@ public class MUWindowListForm : Form
             _contextMenuStrip.Items.Clear();
             int handle = int.Parse(_listView.FocusedItem.Text);
 
-            _contextMenuStrip.Items.Add(IsMonitoring(handle)
-                ? CreateMenuItem("Stop Monitoring", () => StopMonitoring(handle))
-                : CreateMenuItem("Start Monitoring", () => StartMonitoring(handle)));
+            if (IsMonitoring(handle))
+            {
+                _contextMenuStrip.Items.Add(CreateMenuItem("Stop Monitoring", () => StopMonitoring(handle)));
+            }
+            else if (IsMarketing(handle))
+            {
+                _contextMenuStrip.Items.Add(CreateMenuItem("Stop Marketing", () => StopMarketing(handle)));
+            }
+            else
+            {
+                _contextMenuStrip.Items.Add(CreateMenuItem("Start Monitoring", () => StartMonitoring(handle)));
+                _contextMenuStrip.Items.Add(CreateMenuItem("Start Marketing", () => StartMarketing(handle)));
+            }
 
             if (_screenShotManager.ContainsScreenshot(handle))
                 _contextMenuStrip.Items.Add(CreateMenuItem("View Screenshot", () => _screenShotManager.ShowScreenshot(handle)));
 
-            _contextMenuStrip.Items.Add(CreateMenuItem("Find Bombs", () =>
-            {
-                using var form = new FindBombForm(handle);
-                form.ShowDialog();
-            }));
+            //_contextMenuStrip.Items.Add(CreateMenuItem("Find Bombs", () =>
+            //{
+            //    using var form = new FindBombForm(handle);
+            //    form.ShowDialog();
+            //}));
 
             _contextMenuStrip.Show(Cursor.Position);
         }
@@ -125,6 +135,18 @@ public class MUWindowListForm : Form
     {
         _windowMonitorManager.StopMonitoring(windowHandle);
         _notificationManager.ShowBalloonTip("Monitoring stopped", $"Monitoring stopped for window {windowHandle}", ToolTipIcon.Warning);
+    }
+
+    private void StartMarketing(int windowHandle)
+    {
+        _windowMonitorManager.StartMarketing(windowHandle);
+        _notificationManager.ShowBalloonTip("Marketing started", $"Monitoring started for window {windowHandle}");
+    }
+
+    private void StopMarketing(int windowHandle)
+    {
+        _windowMonitorManager.StopMarketing(windowHandle);
+        _notificationManager.ShowBalloonTip("Marketing stopped", $"Monitoring stopped for window {windowHandle}", ToolTipIcon.Warning);
     }
 
     private void SafeLoadWindows(object? sender, EventArgs e)
@@ -163,5 +185,10 @@ public class MUWindowListForm : Form
     public bool IsMonitoring(int windowHandle)
     {
         return _windowMonitorManager.IsMonitoring(windowHandle);
+    }
+
+    public bool IsMarketing(int windowHandle)
+    {
+        return _windowMonitorManager.IsMarketing(windowHandle);
     }
 }

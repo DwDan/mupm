@@ -64,11 +64,11 @@ public class ConfigurationTelegramForm : Form
         });
     }
 
-    private async void PlaySelectedSound()
+    private void PlaySelectedSound()
     {
         string selectedSound = cmbAlarmSound.SelectedItem?.ToString() ?? "None";
 
-        await AlarmManager.PlaySelectedSound(selectedSound);
+        AlarmManager.PlaySelectedSound(selectedSound);
     }
 
     private void onSave(object? sender, EventArgs e)
