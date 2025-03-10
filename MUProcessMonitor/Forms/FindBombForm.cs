@@ -15,23 +15,26 @@ public class FindBombForm : Form
 
         Icon = BitmapHelper.LoadIcon("icon_mupm.ico");
         Text = "Find Bombs";
-        Width = 450;
-        Height = 500;
+        Width = 260;
+        Height = 320;
+        FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterScreen;
 
         _gamePreviewPictureBox = new PictureBox
         {
             SizeMode = PictureBoxSizeMode.Normal,
-            Width = 400,
-            Height = 400,
+            Width = 200,
+            Height = 200,
             Location = new Point(25, 25)
         };
 
         _calculateNextStepButton = new Button
         {
             Text = "Calculate Next Step",
-            Dock = DockStyle.Bottom,
-            Height = 40,
+            Height = 30,
+            Width = 150,
+            Left = 50,
+            Top = 230
         };
 
         _calculateNextStepButton.Click += (s, e) => _gamePreviewPictureBox.Image = _findBombManager.CalculateNextStep();

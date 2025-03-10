@@ -9,25 +9,10 @@ namespace MUProcessMonitor.Manager
         private static readonly Lazy<FindBombManager> _instance = new(() => new FindBombManager());
         public static FindBombManager Instance => _instance.Value;
 
-        public Bitmap EmptyCell = BitmapHelper.LoadBitmap("FindBomb", "empty_cell.png")!;
-        public Bitmap UnknowCell = BitmapHelper.LoadBitmap("FindBomb", "unknow_cell.png")!;
-
-        public Dictionary<int, Bitmap> NumberIcons = new Dictionary<int, Bitmap>
-        {
-            { 1, BitmapHelper.LoadBitmap("FindBomb", "number1.png")! },
-            { 2, BitmapHelper.LoadBitmap("FindBomb", "number2.png")! },
-            { 3, BitmapHelper.LoadBitmap("FindBomb", "number3.png")! },
-            { 4, BitmapHelper.LoadBitmap("FindBomb", "number4.png")! },
-            { 5, BitmapHelper.LoadBitmap("FindBomb", "number5.png")! },
-            { 6, BitmapHelper.LoadBitmap("FindBomb", "number6.png")! },
-            { 7, BitmapHelper.LoadBitmap("FindBomb", "number7.png")! },
-            { 8, BitmapHelper.LoadBitmap("FindBomb", "number8.png")! }
-        };
-
-        private HelperMonitorService _helperMonitorService;
+        private FindBombService _findBombService;
         private readonly NotifyIcon _trayIcon;
 
-        private const int GridSize = 9;
+        private const int GridSize = 8;
         private const int CellSize = 24;
 
         private readonly CellState[,] _cellStates = new CellState[GridSize, GridSize];
@@ -38,34 +23,27 @@ namespace MUProcessMonitor.Manager
 
         public FindBombManager()
         {
-            _helperMonitorService = new HelperMonitorService();
+            _findBombService = new FindBombService();
             _trayIcon = TrayIconManager.Instance;
-        }
-
-        public Bitmap? CaptureScreen()
-        {
-            var windowRect = _helperMonitorService.GetWindowRectangle(_windowHandle);
-
-            return _helperMonitorService.CaptureScreen(windowRect);
         }
 
         public Bitmap? LoadGameCapture(int hWnd)
         {
             _windowHandle = hWnd;
 
-            var screenshot = CaptureScreen();
+            var screenshot = _findBombService.CaptureScreen(_windowHandle);
 
             if (screenshot != null)
             {
                 var initialGame = BitmapHelper.LoadBitmap("FindBomb", "findbomb.png")!;
 
-                if (!_helperMonitorService.IsTemplateVisible(screenshot, initialGame))
+                if (!_findBombService.IsTemplateVisible(screenshot, initialGame))
                 {
                     _trayIcon.ShowBalloonTip(5000, "Error", "Unable to capture the game area", ToolTipIcon.Error);
                     return null;
                 }
 
-                _gameRegion = _helperMonitorService.FindSourceRegion(screenshot, initialGame);
+                _gameRegion = _findBombService.FindSourceRegion(screenshot, initialGame);
 
                 if (_gameRegion != Rectangle.Empty)
                 {
@@ -90,15 +68,15 @@ namespace MUProcessMonitor.Manager
             if (_gameRegion == Rectangle.Empty)
                 return null;
 
-            var screenshot = CaptureScreen();
+            var screenshot = _findBombService.CaptureScreen(_windowHandle);
+
             if (screenshot == null)
             {
                 _trayIcon.ShowBalloonTip(5000, "Error", "Unable to capture the game area", ToolTipIcon.Error);
                 return BitmapHelper.LoadBitmap("FindBomb", "gameRegion.png");
             }
 
-            var screenshotRegion = _helperMonitorService.CaptureRegion(screenshot, _gameRegion);
-
+            var screenshotRegion = _findBombService.CaptureRegion(screenshot, _gameRegion);
             var nextStepImage = new Bitmap(screenshotRegion);
             using (Graphics g = Graphics.FromImage(nextStepImage))
             {
@@ -116,18 +94,17 @@ namespace MUProcessMonitor.Manager
                         var cellRect = new Rectangle(col * CellSize, row * CellSize, CellSize, CellSize);
                         var cellBitmap = nextStepImage.Clone(cellRect, nextStepImage.PixelFormat);
 
-                        if (IsNumberCell(cellBitmap, out int number))
+                        if (_findBombService.IsNumberCell(cellBitmap, out int number))
                         {
                             _cellStates[row, col] = CellState.Number;
                             _cellNumbers[row, col] = number;
                             g.DrawRectangle(numberPen, cellRect);
-                            g.DrawString(number.ToString(), new Font("Arial", 10), Brushes.Blue, cellRect.Location);
                         }
-                        else if (IsUnknowCell(cellBitmap))
+                        else if (_findBombService.IsUnknowCell(cellBitmap))
                         {
                             _cellStates[row, col] = CellState.Unknown;
-                        }                        
-                        else if (IsEmptyCell(cellBitmap))
+                        }
+                        else if (_findBombService.IsEmptyCell(cellBitmap))
                         {
                             _cellStates[row, col] = CellState.Empty;
                             g.DrawRectangle(emptyPen, cellRect);
@@ -139,15 +116,20 @@ namespace MUProcessMonitor.Manager
 
                 CalculateRiskMap();
 
-                (int nextRow, int nextCol) = GetLowestRiskMove();
-                if (nextRow >= 0 && nextCol >= 0)
-                {
-                    var nextRect = new Rectangle(nextCol * CellSize, nextRow * CellSize, CellSize, CellSize);
-                    g.FillRectangle(Brushes.LimeGreen, nextRect);
-                }
+                DrawNextMove(g);
             }
 
             return nextStepImage;
+        }
+
+        private void DrawNextMove(Graphics g)
+        {
+            (int nextRow, int nextCol) = GetLowestRiskMove();
+            if (nextRow >= 0 && nextCol >= 0)
+            {
+                var nextRect = new Rectangle(nextCol * CellSize, nextRow * CellSize, CellSize, CellSize);
+                g.FillRectangle(Brushes.LimeGreen, nextRect);
+            }
         }
 
         private void CalculateRiskMap()
@@ -161,8 +143,7 @@ namespace MUProcessMonitor.Manager
 
         private float CalculateRiskForCell(int row, int col)
         {
-            float totalRisk = 0f;
-            int consideredNumbers = 0;
+            float minRisk = 1f;
 
             foreach (var (nRow, nCol) in GetAdjacentCells(row, col, CellState.Number))
             {
@@ -175,16 +156,22 @@ namespace MUProcessMonitor.Manager
                     int bombsNeeded = bombs - possibleBombs;
                     float risk = bombsNeeded / (float)unknowns.Count;
 
-                    totalRisk += risk;
-                    consideredNumbers++;
+                    minRisk = Math.Min(minRisk, risk);
                 }
             }
 
-            return consideredNumbers > 0 ? totalRisk / consideredNumbers : 1f;
+            return minRisk;
         }
 
         private (int, int) GetLowestRiskMove()
         {
+            var safeCells = _riskMap
+                .Where(kvp => kvp.Value == 0 && _cellStates[kvp.Key.Item1, kvp.Key.Item2] == CellState.Unknown)
+                .ToList();
+
+            if (safeCells.Any())
+                return safeCells.First().Key;
+
             return _riskMap
                 .Where(kvp => _cellStates[kvp.Key.Item1, kvp.Key.Item2] != CellState.PossibleBomb)
                 .OrderBy(kvp => kvp.Value)
@@ -236,7 +223,7 @@ namespace MUProcessMonitor.Manager
                         var bombCount = _cellNumbers[row, col];
                         var possibleBombs = GetAdjacentCells(row, col, CellState.PossibleBomb).Count;
 
-                        if (unknownCells.Count > 0 && bombCount - possibleBombs == unknownCells.Count)
+                        if (bombCount - possibleBombs == unknownCells.Count)
                         {
                             foreach (var (bombRow, bombCol) in unknownCells)
                             {
@@ -245,33 +232,17 @@ namespace MUProcessMonitor.Manager
                                 g.DrawRectangle(possibleBombPen, bombRect);
                             }
                         }
+
+                        if (bombCount == possibleBombs)
+                        {
+                            foreach (var (safeRow, safeCol) in unknownCells)
+                            {
+                                _cellStates[safeRow, safeCol] = CellState.Safe;
+                            }
+                        }
                     }
                 }
             }
-        }
-
-        private bool IsEmptyCell(Bitmap cellBitmap)
-        {
-            return _helperMonitorService.IsTemplateVisible(cellBitmap, EmptyCell);
-        }
-
-        private bool IsUnknowCell(Bitmap cellBitmap)
-        {
-            return _helperMonitorService.IsTemplateVisible(cellBitmap, UnknowCell);
-        }
-
-        private bool IsNumberCell(Bitmap cellBitmap, out int number)
-        {
-            foreach (var kvp in NumberIcons)
-            {
-                if (_helperMonitorService.IsTemplateVisible(cellBitmap, kvp.Value))
-                {
-                    number = kvp.Key;
-                    return true;
-                }
-            }
-            number = 0;
-            return false;
         }
     }
 }

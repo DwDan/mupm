@@ -44,16 +44,6 @@ namespace MUProcessMonitor.Services
             return bitmap;
         }
 
-        public Bitmap CaptureRegion(Bitmap screenshot, Rectangle region)
-        {
-            if (region.Width <= 0 || region.Height <= 0)
-                return new Bitmap(1, 1);
-
-            Rectangle validRegion = Rectangle.Intersect(new Rectangle(System.Drawing.Point.Empty, screenshot.Size), region);
-
-            return screenshot.Clone(validRegion, screenshot.PixelFormat);
-        }
-
         private bool IsIconVisible(Bitmap screenshot, Bitmap? icon, bool isTopRegion)
         {
             try
@@ -131,39 +121,12 @@ namespace MUProcessMonitor.Services
             return new Rect(roiX, roiY, roiWidth, roiHeight);
         }
 
-        public Mat GetRegionOfInterest(Bitmap screenshot, int roiX = 0, int roiY = 0, int roiWidth = 0, int roiHeight = 0)
-        {
-            using Mat source = BitmapConverter.ToMat(screenshot);
-
-            int width = source.Width;
-            int height = source.Height;
-
-            var roi = new Rect(roiX, roiY, roiWidth, roiHeight);
-
-            return new Mat(source, roi);
-        }
-
         private bool IsTemplateMatchingThresholdMet(Mat source, Mat template)
         {
             using Mat result = new Mat();
             Cv2.MatchTemplate(source, template, result, TemplateMatchModes.CCoeffNormed);
             Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out _);
             return maxVal >= Threshold;
-        }
-
-        public Rectangle FindSourceRegion(Bitmap screenshot, Bitmap region)
-        {
-            using Mat source = BitmapConverter.ToMat(screenshot);
-            using Mat template = BitmapConverter.ToMat(region);
-            using Mat result = new Mat();
-
-            Cv2.MatchTemplate(source, template, result, TemplateMatchModes.CCoeffNormed);
-            Cv2.MinMaxLoc(result, out _, out double maxVal, out _, out OpenCvSharp.Point maxLoc);
-
-            if (maxVal >= Threshold)
-                return new Rectangle(maxLoc.X, maxLoc.Y, region.Width, region.Height);
-
-            return Rectangle.Empty;
         }
     }
 }

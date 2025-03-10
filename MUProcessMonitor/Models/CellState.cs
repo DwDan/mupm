@@ -5,5 +5,6 @@ public enum CellState
     Unknown,
     Empty,
     PossibleBomb,
-    Number
+    Number,
+    Safe
 }
